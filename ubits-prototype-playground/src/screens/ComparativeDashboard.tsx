@@ -725,6 +725,12 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
         const shifted_current = shiftData(s.currentScore);
         const shifted_p1 = shiftData(s.p1);
+
+        let delta = null;
+        if (!hasNoResponses && shifted_current && shifted_p1) {
+          delta = Number((shifted_current.positive - shifted_p1.positive).toFixed(1));
+        }
+
         return {
           ...s,
           currentScore: shifted_current,
@@ -732,7 +738,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
           p2: shiftData(s.p2),
           p3: shiftData(s.p3),
           p4: shiftData(s.p4),
-          delta: hasNoResponses ? null : Number((shifted_current.positive - shifted_p1.positive).toFixed(1)),
+          delta: delta,
           noResponses: hasNoResponses
         };
       });

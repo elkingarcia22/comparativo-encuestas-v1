@@ -4377,12 +4377,21 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
           </div>
 
           {/* Drawer Footer Actions - Fixed at bottom */}
-          <div className="px-8 py-6 bg-white border-t border-border/10 shrink-0 shadow-[0_-12px_40px_rgba(0,0,0,0.12)] relative z-30">
-            <Button className="w-full h-12 bg-brand hover:bg-brand/90 text-text-inverse font-bold tracking-tight rounded-2xl shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-4 group">
-              <Download className="h-4 w-4 transition-transform group-hover:-translate-y-1" />
-              Descargar reporte detallado
-            </Button>
-          </div>
+          {(() => {
+            const selectedItem = filteredAndSortedSentiment.find(s => s.dimension === selectedDimensionDetail);
+            const hasNoResponses = type === 'Cultura' && selectedItem && (selectedItem as any).noResponses === true;
+
+            if (hasNoResponses) return null;
+
+            return (
+              <div className="px-8 py-6 bg-white border-t border-border/10 shrink-0 shadow-[0_-12px_40px_rgba(0,0,0,0.12)] relative z-30">
+                <Button className="w-full h-12 bg-brand hover:bg-brand/90 text-text-inverse font-bold tracking-tight rounded-2xl shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-4 group">
+                  <Download className="h-4 w-4 transition-transform group-hover:-translate-y-1" />
+                  Descargar reporte detallado
+                </Button>
+              </div>
+            );
+          })()}
         </SheetContent>
       </Sheet>
 

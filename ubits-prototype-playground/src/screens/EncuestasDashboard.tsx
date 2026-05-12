@@ -339,11 +339,11 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
         <ChevronDown className="h-4 w-4 opacity-50 group-data-[state=open]:rotate-180 transition-transform duration-200" />
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl border-border/40 shadow-xl bg-surface/95 backdrop-blur-sm animate-in fade-in-0 zoom-in-95">
+    <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl border-border/40 shadow-xl bg-popover animate-in fade-in-0 zoom-in-95">
       <DropdownMenuLabel className="px-2 py-1.5 text-[10px] font-bold text-text-secondary/40 uppercase tracking-widest">Opciones de creación</DropdownMenuLabel>
       <DropdownMenuSeparator className="bg-border/40 my-1.5" />
-      <DropdownMenuItem className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer focus:bg-primary/5 focus:text-primary transition-all group">
-        <div className="h-8 w-8 rounded-lg bg-surface-muted flex items-center justify-center group-focus:bg-primary/10 transition-colors">
+      <DropdownMenuItem className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer focus:bg-accent focus:text-accent-foreground transition-all group">
+        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center group-focus:bg-background transition-colors">
           <Plus className="h-4 w-4 text-text-secondary group-focus:text-primary" />
         </div>
         <div className="flex flex-col gap-0.5">
@@ -351,8 +351,8 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
           <span className="text-[10px] text-text-secondary/50 font-medium">Empieza desde cero</span>
         </div>
       </DropdownMenuItem>
-      <DropdownMenuItem className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer focus:bg-primary/5 focus:text-primary transition-all group">
-        <div className="h-8 w-8 rounded-lg bg-surface-muted flex items-center justify-center group-focus:bg-primary/10 transition-colors">
+      <DropdownMenuItem className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer focus:bg-accent focus:text-accent-foreground transition-all group">
+        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center group-focus:bg-background transition-colors">
           <Layout className="h-4 w-4 text-text-secondary group-focus:text-primary" />
         </div>
         <div className="flex flex-col gap-0.5">

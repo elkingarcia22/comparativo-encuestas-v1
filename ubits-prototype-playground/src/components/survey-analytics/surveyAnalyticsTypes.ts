@@ -102,6 +102,8 @@ export interface ResponseStackedBarItem {
   metadata?: string
   /** Whether this is the base item for comparison */
   isBase?: boolean
+  /** Custom message to show when there are no responses */
+  emptyMessage?: string
 }
 
 export interface ResponseStackedBarProps {
@@ -133,9 +135,12 @@ export interface ResponseStackedBarProps {
   size?: "sm" | "md"
   /** Whether this is the base item for comparison */
   isBase?: boolean
+  /** Custom message to show when there are no responses */
+  emptyMessage?: string
   /** Additional CSS classes */
   className?: string
 }
+
 
 export interface ResponseStackedBarGroupProps {
   /** Items (bars) to display in the group */

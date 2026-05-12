@@ -51,11 +51,23 @@ export function DeltaPill({
       sizeClasses,
       className
     )}>
-      {showIcon && <Icon className={cn(
-        size === "xs" ? "h-2.5 w-2.5" : 
-        size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"
-      )} />}
-      <span>{label || (value !== undefined ? `${value > 0 ? '+' : ''}${value}%` : '')}</span>
+      {resolvedTone === 'neutral' && resolvedDirection === 'flat' ? (
+        <div className="flex items-center gap-1.5">
+          <div className={cn(
+            "rounded-full bg-[#CBD5E1] shrink-0",
+            size === "xs" ? "w-1 h-1" : size === "sm" ? "w-1.5 h-1.5" : "w-2 h-2"
+          )} />
+          <span>{label || 'Sin variación relevante'}</span>
+        </div>
+      ) : (
+        <>
+          {showIcon && <Icon className={cn(
+            size === "xs" ? "h-2.5 w-2.5" : 
+            size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"
+          )} />}
+          <span>{label || (value !== undefined ? `${value > 0 ? '+' : ''}${value}%` : '')}</span>
+        </>
+      )}
     </div>
   )
 }

@@ -441,12 +441,12 @@ export const CULTURA_DIMENSIONS_DATA = [
     name: "Valores Vivenciados",
     description: "Grado en que se practican los valores",
     currentScore: 88,
-    p1: 82,
+    p1: 88,
     p2: 80,
     p3: 78, 
     p4: 75,
-    delta: 6,
-    trend: 'up' as const,
+    delta: 0,
+    trend: 'neutral' as const,
     responses: 1100
   },
   {
@@ -590,11 +590,11 @@ export const COMPARATIVE_QUESTIONS_DATA = [
     id: "q-5",
     question: "Entiendo cómo mi trabajo contribuye a los objetivos",
     dimension: "Comunicación",
-    currentScore: 88,
+    currentScore: 85,
     p1: 85,
     p2: 84,
-    trend: [80, 82, 84, 85, 88],
-    delta: 3,
+    trend: [80, 82, 84, 85, 85],
+    delta: 0,
     responses: 450
   },
   {
@@ -961,6 +961,14 @@ export const CULTURA_SENTIMENT_DATA = [
     p1: null,
     p2: { positive: 50, neutral: 30, negative: 20, total: 200 },
     delta: null
+  },
+  {
+    id: "csent-7",
+    dimension: "Empoderamiento",
+    currentScore: { positive: 70, neutral: 20, negative: 10, total: 380 },
+    p1: { positive: 70, neutral: 20, negative: 10, total: 380 },
+    p2: null,
+    delta: 0
   }
 ];
 
@@ -1400,6 +1408,27 @@ export const CULTURA_AI_INSIGHTS = {
   predictions: {
     summary: "Proyecciones de madurez cultural",
     scenarios: [
+      {
+        label: "2024 (Actual)",
+        predicted: 82.4,
+        probabilityGrowth: 0,
+        probabilityDecline: 0,
+        probabilityStable: 100
+      },
+      {
+        label: "2025",
+        predicted: 85.8,
+        probabilityGrowth: 65,
+        probabilityDecline: 10,
+        probabilityStable: 25
+      },
+      {
+        label: "2026",
+        predicted: 89.2,
+        probabilityGrowth: 72,
+        probabilityDecline: 8,
+        probabilityStable: 20
+      },
       {
         label: "2027",
         predicted: 92.5,

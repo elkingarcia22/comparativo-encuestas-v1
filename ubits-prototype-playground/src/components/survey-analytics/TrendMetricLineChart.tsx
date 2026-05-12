@@ -151,7 +151,7 @@ export function TrendMetricLineChart({
         bottom: isSparkline ? 5 : (showLegend ? 40 : (standalone ? 25 : 25)),
         left: isSparkline ? 0 : (standalone ? 15 : 40),
         right: isSparkline ? 0 : (standalone ? 5 : 10),
-        containLabel: !isSparkline
+        containLabel: !isSparkline,
       },
       xAxis: {
         show: !isSparkline,

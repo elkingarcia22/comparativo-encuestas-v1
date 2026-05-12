@@ -122,14 +122,16 @@ export function getHeatmapData(segmentType: string): { segments: HeatmapSegment[
 export const HEATMAP_SEGMENTS = SEGMENTS_BY_TYPE['Área'];
 export const HEATMAP_DIMENSIONS_DATA = getHeatmapData('Área').data;
 
+// Soft semantic colors — semi-transparent for readability
 export function getHeatmapTone(delta: number, status?: string): string {
   if (status === 'private') return 'heatmap-private';
   if (status === 'low_n') return 'heatmap-low-n';
   
-  // Soft semantic colors — semi-transparent for readability
+  // 'Sin variación' state for Cultura
+  if (Math.abs(delta) < 0.1) return 'bg-[#F1F5F9] border-[#CBD5E1] text-[#64748B]';
+
   if (delta <= -5) return 'heatmap-negative-strong';
   if (delta >= -4 && delta <= -1) return 'heatmap-negative-light';
-  if (delta === 0) return 'heatmap-neutral';
   if (delta >= 1 && delta <= 4) return 'heatmap-positive-light';
   if (delta >= 5) return 'heatmap-positive-strong';
   
@@ -138,6 +140,7 @@ export function getHeatmapTone(delta: number, status?: string): string {
 
 // Función para formatear el delta
 export function formatDelta(delta: number): string {
+  if (Math.abs(delta) < 0.1) return '';
   if (delta > 0) return `+${delta}pp`;
   return `${delta}pp`;
 }

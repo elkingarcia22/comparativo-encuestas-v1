@@ -52,7 +52,10 @@ export function EChart({
     if (!chartRef.current) return
 
     const theme = getUbitsChartTheme()
-    const instance = echarts.init(chartRef.current, theme)
+    let instance = echarts.getInstanceByDom(chartRef.current)
+    if (!instance) {
+      instance = echarts.init(chartRef.current, theme)
+    }
     instanceRef.current = instance
 
     instance.setOption(option)

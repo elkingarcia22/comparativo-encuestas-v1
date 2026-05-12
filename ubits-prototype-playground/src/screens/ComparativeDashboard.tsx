@@ -217,6 +217,43 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   comparativeIds = [],
   type
 }) => {
+  // Tab-specific Filtering State
+  type TabId = 'resumen' | 'favorabilidad' | 'participacion' | 'nps' | 'dimensionesTable' | 'dimensionesHeatmap' | 'preguntas' | 'comentarios';
+
+  interface TabFilters {
+    demographics: Record<string, string[]>;
+    segments: Array<{ variable: string; values: string[] }>;
+  }
+
+  const initialDemographics = React.useMemo(() => ({
+    area: [], lider: [], rol: [], ciudad: [], pais: [],
+    edad: [], sexo: [], columnaA: [], columnaB: []
+  }), []);
+
+  const initialSegments = React.useMemo(() => [{ variable: '', values: [] }], []);
+
+  const [tabFilters, setTabFilters] = React.useState<Record<TabId, TabFilters>>({
+    resumen: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
+    favorabilidad: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
+    participacion: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
+    nps: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
+    dimensionesTable: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
+    dimensionesHeatmap: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
+    preguntas: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
+    comentarios: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
+  });
+
+  // Helper to get active filters count for a specific tab
+  const getActiveFiltersCount = React.useCallback((tabId: TabId) => {
+    const filters = tabFilters[tabId as keyof typeof tabFilters];
+    if (!filters) return { demographics: 0, segments: 0, total: 0 };
+    
+    const demCount = Object.values(filters.demographics).reduce((acc, curr) => acc + (curr?.length || 0), 0);
+    const segCount = filters.segments.filter(s => s.variable && s.values.length > 0).length;
+    return { demographics: demCount, segments: segCount, total: demCount + segCount };
+  }, [tabFilters]);
+
+
   const [searchTerm, setSearchTerm] = React.useState("");
   const [activeViewTop, setActiveViewTop] = React.useState<'detalle' | 'tendencia'>('detalle');
   const [activeViewTopPart, setActiveViewTopPart] = React.useState<'detalle' | 'tendencia'>('detalle');
@@ -254,14 +291,12 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   const [shareLink, setShareLink] = React.useState('');
 
   // questions Tab State
-  // Questions Tab State
   const [selectedQuestionDimensions, setSelectedQuestionDimensions] = React.useState<string[]>(() => {
     const data = type === 'Cultura' ? CULTURA_DIMENSIONS_DATA : COMPARATIVE_DIMENSIONS_DATA;
     return data.map(d => d.name);
   });
   const [sortQuestionsCriteria, setSortQuestionsCriteria] = React.useState<string>("mejora");
 
-  // Sentiment Tab State
   // Sentiment Tab State
   const [selectedSentimentDimensions, setSelectedSentimentDimensions] = React.useState<string[]>(() => {
     const data = type === 'Cultura' ? CULTURA_DIMENSIONS_DATA : COMPARATIVE_DIMENSIONS_DATA;
@@ -311,7 +346,6 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     if (!baseSurvey) return [];
     const allSelected = [baseSurvey, ...comparisonSurveys];
 
-    // Count occurrences of each year/suffix to identify collisions
     const suffixCounts: Record<string, number> = {};
     allSelected.forEach(s => {
       const suffix = s.name.includes(' - ') ? s.name.split(' - ').pop() || '' : s.name;
@@ -320,7 +354,6 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
     const getShortLabel = (s: any) => {
       const suffix = s.name.includes(' - ') ? s.name.split(' - ').pop() || '' : s.name;
-      // If there's a collision, prepend the first word of the name to differentiate
       if (suffixCounts[suffix] > 1) {
         const firstWord = s.name.split(' ')[0];
         return `${firstWord} ${suffix}`;
@@ -376,22 +409,15 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
       columns.forEach((col, index) => {
         if (type === 'Cultura') {
-          // Map Cultura keys based on column order (most recent first)
           const keys = ['currentScore', 'p1', 'p2', 'p3', 'p4', 'p5'];
           const targetKey = keys[index] || 'currentScore';
           if ((item as any)[targetKey]) {
             newItem[col.sentKey] = (item as any)[targetKey];
           }
         } else {
-          // Map Clima IDs to mock keys with improved fallback
           const mockKeysMapping: Record<string, string> = {
-            'c2': 'q4_2024',
-            'c3': 'q3_2024',
-            'c4': 'q2_2024',
-            'c5': 'q1_2024',
-            'base-clima': 'q4_2024'
+            'c2': 'q4_2024', 'c3': 'q3_2024', 'c4': 'q2_2024', 'c5': 'q1_2024', 'base-clima': 'q4_2024'
           };
-
           const keys = ['q4_2024', 'q3_2024', 'q2_2024', 'q1_2024', 'q4_2023'];
           const targetKey = mockKeysMapping[col.id] || keys[index] || 'q4_2024';
 
@@ -403,7 +429,6 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         }
       });
 
-      // Safety defaults
       if (!newItem.currentScore) newItem.currentScore = { positive: 0, neutral: 0, negative: 0, total: 0 };
       return newItem;
     });
@@ -414,61 +439,56 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   }, [type]);
 
   const aiInsightsSource = React.useMemo(() => {
-    const base = type === 'Cultura' ? CULTURA_AI_INSIGHTS : COMPARATIVE_AI_INSIGHTS;
+    const filterCount = getActiveFiltersCount('resumen').total;
+    const baseRaw = type === 'Cultura' ? CULTURA_AI_INSIGHTS : COMPARATIVE_AI_INSIGHTS;
+    
+    // Deep clone to avoid mutating mock
+    const base = JSON.parse(JSON.stringify(baseRaw));
+
+    // Simulation: Apply filter impact to predictions
+    if (filterCount > 0 && base.predictions?.scenarios) {
+      const scenarios = base.predictions.scenarios;
+      scenarios.forEach((s: any, idx: number) => {
+        // More filters = lower predicted value (simulated impact)
+        const shift = filterCount * 2.5;
+        if (s.predicted !== null) {
+          const newValue = s.predicted - shift;
+          
+          // Simulation: If filters are very restrictive, last scenario might have no data
+          if (filterCount >= 3 && idx === scenarios.length - 1) {
+            s.predicted = null;
+            s.probabilityGrowth = 0;
+            s.probabilityDecline = 0;
+            s.probabilityStable = 0;
+          } else {
+            s.predicted = Number(newValue.toFixed(1));
+          }
+        }
+      });
+    }
+
     if (selectedDimensionDetail) {
       return {
         ...base,
         summary: `Análisis de IA para ${selectedDimensionDetail}: ${base.summary}`,
         featuredInsights: Object.fromEntries(
-          Object.entries(base.featuredInsights).map(([k, v]) => [k, v.replace('La cultura de UBITS', `La dimensión de ${selectedDimensionDetail}`)])),
+          Object.entries(base.featuredInsights || {}).map(([k, v]) => [k, (v as string).replace('La cultura de UBITS', `La dimensión de ${selectedDimensionDetail}`)])),
         recurrentThemes: Object.fromEntries(
-          Object.entries(base.recurrentThemes).map(([k, v]) => [k, (v as any[]).map(t => ({ ...t, desc: `${t.desc} en ${selectedDimensionDetail}` }))]))
+          Object.entries(base.recurrentThemes || {}).map(([k, v]) => [k, (v as any[]).map(t => ({ ...t, desc: `${t.desc} en ${selectedDimensionDetail}` }))]))
       };
     }
     return base;
-  }, [type, selectedDimensionDetail]);
+  }, [type, selectedDimensionDetail, getActiveFiltersCount]);
 
   const filteredComments = React.useMemo(() => {
     if (!selectedDimensionDetail) return commentsSource;
     return commentsSource.filter(c => c.dimension === selectedDimensionDetail);
   }, [selectedDimensionDetail, commentsSource]);
 
-  // Tab-specific Filtering State
-  type TabId = 'resumen' | 'favorabilidad' | 'participacion' | 'nps' | 'dimensionesTable' | 'dimensionesHeatmap' | 'preguntas' | 'comentarios';
-
-  interface TabFilters {
-    demographics: Record<string, string[]>;
-    segments: Array<{ variable: string; values: string[] }>;
-  }
-
-  const initialDemographics = {
-    area: [], lider: [], rol: [], ciudad: [], pais: [],
-    edad: [], sexo: [], columnaA: [], columnaB: []
-  };
-
-  const initialSegments = [{ variable: '', values: [] }];
-
-  const [tabFilters, setTabFilters] = React.useState<Record<TabId, TabFilters>>({
-    resumen: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
-    favorabilidad: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
-    participacion: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
-    nps: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
-    dimensionesTable: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
-    dimensionesHeatmap: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
-    preguntas: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
-    comentarios: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
-  });
-
   const [activeFilterTab, setActiveFilterTab] = React.useState<TabId>('favorabilidad');
   const [isFiltersDrawerOpen, setIsFiltersDrawerOpen] = React.useState(false);
   const [isSegmentDrawerOpen, setIsSegmentDrawerOpen] = React.useState(false);
 
-  // Helper to get active filters count for a specific tab
-  const getActiveFiltersCount = React.useCallback((tabId: TabId) => {
-    const demCount = Object.values(tabFilters[tabId].demographics).reduce((acc, curr) => acc + (curr?.length || 0), 0);
-    const segCount = tabFilters[tabId].segments.filter(s => s.variable && s.values.length > 0).length;
-    return { demographics: demCount, segments: segCount, total: demCount + segCount };
-  }, [tabFilters]);
 
   const updateTabDemographics = (tabId: TabId, category: string, values: string[]) => {
     setTabFilters(prev => ({
@@ -1219,20 +1239,28 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   const resumenBaseFavItem = React.useMemo(() => {
     if (!baseColumn || !resumenFavData?.distributionByPeriod) return null;
     const baseDistItem = resumenFavData.distributionByPeriod.find(item => item.isBase);
+    const isNoResponses = baseDistItem?.status === 'no_responses';
     const positivePercentage = baseDistItem?.segments?.find(s => s.tone === 'positive')?.percentage || 0;
     return {
       label: baseColumn.label,
-      value: formatPercentage(positivePercentage),
-      isBase: true
+      value: isNoResponses ? 'Sin respuestas' : `${formatPercentage(positivePercentage)}`,
+      isBase: true,
+      noResponses: isNoResponses
     };
   }, [baseColumn, resumenFavData]);
 
-  const resumenFavFooterItems = React.useMemo(() => (resumenFavData?.comparisons || []).map(c => ({
-    label: c.label.charAt(0).toUpperCase() + c.label.slice(1).toLowerCase(),
-    value: `${formatPercentage(c.value)}%`,
-    delta: c.delta !== undefined ? `${c.delta >= 0 ? '+' : ''}${c.delta}%` : undefined,
-    tone: c.trend === 'up' ? 'positive' : c.trend === 'down' ? 'negative' : 'neutral'
-  })), [resumenFavData]);
+  const resumenFavFooterItems = React.useMemo(() => (resumenFavData?.comparisons || []).map(c => {
+    const isSignificant = type === 'Cultura' ? Math.abs(c.delta || 0) >= 0.1 : true;
+    const isNoResponses = (c as any).status === 'no_responses';
+    
+    return {
+      label: c.label.charAt(0).toUpperCase() + c.label.slice(1).toLowerCase(),
+      value: isNoResponses ? 'Sin respuestas' : `${formatPercentage(c.value)}%`,
+      delta: isNoResponses ? undefined : (c.delta !== undefined ? Number(c.delta.toFixed(1)) : undefined),
+      deltaLabel: isNoResponses ? 'Sin respuestas' : (!isSignificant ? 'Sin variación relevante' : undefined),
+      tone: isNoResponses || !isSignificant ? 'neutral' as const : (c.trend === 'up' ? 'positive' as const : 'negative' as const)
+    };
+  }), [resumenFavData, type]);
 
   const resumenDistributionItems = React.useMemo(() => {
     const dist = resumenFavData?.distributionByPeriod || [];
@@ -1268,16 +1296,28 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   const resumenBasePartItem = React.useMemo(() => {
     if (!baseColumn || !resumenPartData?.distributionByPeriod) return null;
     const baseDistItem = resumenPartData.distributionByPeriod.find(item => item.isBase);
+    const isNoResponses = baseDistItem?.status === 'no_responses';
     const positivePercentage = baseDistItem?.segments?.find(s => s.tone === 'positive')?.percentage || 0;
-    return { label: baseColumn.label, value: formatPercentage(positivePercentage), isBase: true };
+    return { 
+      label: baseColumn.label, 
+      value: isNoResponses ? 'Sin respuestas' : `${formatPercentage(positivePercentage)}`, 
+      isBase: true,
+      noResponses: isNoResponses
+    };
   }, [baseColumn, resumenPartData]);
 
-  const resumenPartFooterItems = React.useMemo(() => (resumenPartData?.comparisons || []).map(c => ({
-    label: c.label.charAt(0).toUpperCase() + c.label.slice(1).toLowerCase(),
-    value: `${formatPercentage(c.value)}%`,
-    delta: c.delta !== undefined ? `${c.delta >= 0 ? '+' : ''}${c.delta}%` : undefined,
-    tone: c.trend === 'up' ? 'positive' : c.trend === 'down' ? 'negative' : 'neutral'
-  })), [resumenPartData]);
+  const resumenPartFooterItems = React.useMemo(() => (resumenPartData?.comparisons || []).map(c => {
+    const isSignificant = type === 'Cultura' ? Math.abs(c.delta || 0) >= 0.1 : true;
+    const isNoResponses = (c as any).status === 'no_responses';
+    
+    return {
+      label: c.label.charAt(0).toUpperCase() + c.label.slice(1).toLowerCase(),
+      value: isNoResponses ? 'Sin respuestas' : `${formatPercentage(c.value)}%`,
+      delta: isNoResponses ? undefined : (c.delta !== undefined ? Number(c.delta.toFixed(1)) : undefined),
+      deltaLabel: isNoResponses ? 'Sin respuestas' : (!isSignificant ? 'Sin variación relevante' : undefined),
+      tone: isNoResponses || !isSignificant ? 'neutral' as const : (c.trend === 'up' ? 'positive' as const : 'negative' as const)
+    };
+  }), [resumenPartData, type]);
 
   const resumenPartDistributionItems = React.useMemo(() => {
     const dist = resumenPartData?.distributionByPeriod || [];
@@ -1490,6 +1530,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     }
 
     const sentimentData = sentimentSource.find(s => s.dimension === selectedDimensionDetail);
+    const filteredItem = filteredAndSortedSentiment.find(s => s.dimension === selectedDimensionDetail);
+    const globalNoResponses = type === 'Cultura' && filteredItem && (filteredItem as any).noResponses === true;
+
     if (!sentimentData) {
       return [];
     }
@@ -1499,15 +1542,23 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       const data = (sentimentData as any)[col.sentKey];
 
       if (!data) {
-        return null;
+        return {
+          id: `sent-survey-${col.id}`,
+          label: col.shortLabel + (col.isBase ? ' (BASE)' : ''),
+          segments: [],
+          value: '—',
+          emptyMessage: "Sin Dimensión"
+        };
       }
+
+      const isNoResponses = globalNoResponses || data.total === 0;
 
       // Calculate delta vs previous survey
       let delta = 0;
-      if (index > 0) {
+      if (index > 0 && !isNoResponses) {
         const prevCol = columns[index - 1];
         const prevData = (sentimentData as any)[prevCol.sentKey];
-        if (prevData) {
+        if (prevData && prevData.total > 0) {
           delta = data.positive - prevData.positive;
         }
       }
@@ -1515,21 +1566,22 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       const item = {
         id: `sent-survey-${col.id}`,
         label: col.shortLabel + (col.isBase ? ' (BASE)' : ''),
-        value: formatPercentage(data.positive),
-        segments: [
+        value: isNoResponses ? 'sin respuestas' : formatPercentage(data.positive),
+        segments: isNoResponses ? [] : [
           { id: `pos-${col.id}`, label: 'Positivo', value: formatPercentage(data.positive), percentage: formatPercentage(data.positive), tone: 'positive' as const },
           { id: `neu-${col.id}`, label: 'Neutral', value: formatPercentage(data.neutral), percentage: formatPercentage(data.neutral), tone: 'neutral' as const },
           { id: `neg-${col.id}`, label: 'Negativo', value: formatPercentage(data.negative), percentage: formatPercentage(data.negative), tone: 'negative' as const },
         ],
-        total: data.total,
-        delta: index > 0 ? delta : undefined,
-        deltaTone: delta >= 0 ? 'positive' as const : 'negative' as const
+        total: isNoResponses ? 0 : data.total,
+        delta: index > 0 && !isNoResponses ? delta : undefined,
+        deltaTone: delta >= 0 ? 'positive' as const : 'negative' as const,
+        emptyMessage: isNoResponses ? "Sin respuestas" : undefined
       };
       return item;
-    }).filter(Boolean);
+    });
 
     return items;
-  }, [selectedDimensionDetail, columns, sentimentSource]);
+  }, [selectedDimensionDetail, columns, sentimentSource, filteredAndSortedSentiment]);
 
   // Get filters specific to each section/tab
   const getSectionFilters = React.useCallback((tabId: string) => {
@@ -1786,7 +1838,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         <span className="text-[11px] font-bold text-text-secondary">Mejora significativa</span>
       </div>
       <div className="flex items-center gap-2">
-        <div className="w-2.5 h-2.5 rounded-full bg-text-secondary/20" />
+        <div className="w-2.5 h-2.5 rounded-full bg-[#CBD5E1]" />
         <span className="text-[11px] font-bold text-text-secondary">Sin variación relevante</span>
       </div>
       <div className="flex items-center gap-2">
@@ -2174,92 +2226,97 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
         <div className={cn(
           "px-4 sm:px-10 pt-2 grid grid-cols-1 gap-8",
-          type === 'Cultura' ? "lg:grid-cols-2" : "lg:grid-cols-3"
+          (type === 'Cultura' || type === 'NPS') ? "lg:grid-cols-2" : "lg:grid-cols-3"
         )}>
           {/* Favorability Card */}
-          <Card className="border border-border/40 bg-surface shadow-sm rounded-[40px] overflow-hidden group hover:shadow-xl hover:border-border/60 transition-all duration-500 flex flex-col min-h-[600px]">
-            <CardHeader className="px-8 pt-8 pb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center text-brand group-hover:scale-110 transition-transform shadow-inner">
-                    <BarChart3 className="h-6 w-6" />
+          {type !== 'NPS' && (
+            <Card className="border border-border/40 bg-surface shadow-sm rounded-[40px] overflow-hidden group hover:shadow-xl hover:border-border/60 transition-all duration-500 flex flex-col min-h-[600px]">
+              <CardHeader className="px-8 pt-8 pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center text-brand group-hover:scale-110 transition-transform shadow-inner">
+                      <BarChart3 className="h-6 w-6" />
+                    </div>
+                    <div className="flex flex-col">
+                      <h3 className="text-base font-bold text-text-primary tracking-tight">Favorabilidad</h3>
+                      <span className="text-xs font-bold text-text-secondary tracking-tight">Resumen comparativo</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col">
-                    <h3 className="text-base font-bold text-text-primary tracking-tight">Favorabilidad</h3>
-                    <span className="text-xs font-bold text-text-secondary tracking-tight">Resumen comparativo</span>
+
+                  {/* Segmented Control Toggle */}
+                  <div className="bg-muted/30 p-1.5 rounded-xl border border-border/5 flex items-center gap-1">
+                    <button
+                      onClick={() => setActiveViewTop('detalle')}
+                      className={cn(
+                        "px-4 py-2 text-xs font-bold tracking-tight rounded-lg transition-all",
+                        activeViewTop === 'detalle' ? "bg-surface text-brand shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
+                      )}
+                    >
+                      Detalle
+                    </button>
+                    <button
+                      onClick={() => setActiveViewTop('tendencia')}
+                      className={cn(
+                        "px-4 py-2 text-xs font-bold tracking-tight rounded-lg transition-all",
+                        activeViewTop === 'tendencia' ? "bg-surface text-brand shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
+                      )}
+                    >
+                      Tendencia
+                    </button>
                   </div>
                 </div>
+              </CardHeader>
 
-                {/* Segmented Control Toggle */}
-                <div className="bg-muted/30 p-1.5 rounded-xl border border-border/5 flex items-center gap-1">
-                  <button
-                    onClick={() => setActiveViewTop('detalle')}
-                    className={cn(
-                      "px-4 py-2 text-xs font-bold tracking-tight rounded-lg transition-all",
-                      activeViewTop === 'detalle' ? "bg-surface text-brand shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
-                    )}
-                  >
-                    Detalle
-                  </button>
-                  <button
-                    onClick={() => setActiveViewTop('tendencia')}
-                    className={cn(
-                      "px-4 py-2 text-xs font-bold tracking-tight rounded-lg transition-all",
-                      activeViewTop === 'tendencia' ? "bg-surface text-brand shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
-                    )}
-                  >
-                    Tendencia
-                  </button>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent className="flex-1 px-8 pb-6">
-              <div className="h-full flex flex-col justify-center relative">
-                {activeViewTop === 'detalle' ? (
-                  <div className="animate-in fade-in slide-in-from-left-2 duration-500 h-full flex flex-col justify-center space-y-8">
-                    {resumenBaseFavItem ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-sm font-bold text-text-primary">{resumenBaseFavItem.label}</span>
-                          <span className="px-2 py-1 bg-brand/10 text-brand text-xs font-bold rounded-lg">BASE</span>
+              <CardContent className="flex-1 px-8 pb-6">
+                <div className="h-full flex flex-col justify-center relative">
+                  {activeViewTop === 'detalle' ? (
+                    <div className="animate-in fade-in slide-in-from-left-2 duration-500 h-full flex flex-col justify-center space-y-8">
+                      {resumenBaseFavItem ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-sm font-bold text-text-primary">{resumenBaseFavItem.label}</span>
+                            <span className="px-2 py-1 bg-brand/10 text-brand text-xs font-bold rounded-lg">BASE</span>
+                          </div>
+                          <div className="text-3xl font-bold text-brand">
+                            {resumenBaseFavItem.value}
+                            {resumenBaseFavItem.value !== 'Sin respuestas' && '%'}
+                          </div>
                         </div>
-                        <div className="text-3xl font-bold text-brand">{resumenBaseFavItem.value}%</div>
-                      </div>
-                    ) : null}
-                    <ResponseStackedBarGroup
-                      items={resumenDistributionItems}
-                      showLegend={false}
-                      showPercentages
-                      size="md"
-                      compact
-                      className="space-y-8"
-                    />
-                  </div>
-                ) : (
-                  <div className="animate-in fade-in slide-in-from-right-2 duration-500 h-full flex flex-col justify-center">
-                    <TrendMetricLineChart
-                      series={resumenFavTrendSeries}
-                      height={280}
-                      showLegend={false}
-                      showComparison={false}
-                      standalone
-                    />
-                  </div>
-                )}
-              </div>
-            </CardContent>
+                      ) : null}
+                      <ResponseStackedBarGroup
+                        items={resumenDistributionItems}
+                        showLegend={false}
+                        showPercentages
+                        size="md"
+                        compact
+                        className="space-y-8"
+                      />
+                    </div>
+                  ) : (
+                    <div className="animate-in fade-in slide-in-from-right-2 duration-500 h-full flex flex-col justify-center">
+                      <TrendMetricLineChart
+                        series={resumenFavTrendSeries}
+                        height={280}
+                        showLegend={false}
+                        showComparison={false}
+                        standalone
+                      />
+                    </div>
+                  )}
+                </div>
+              </CardContent>
 
-            {activeViewTop === 'tendencia' && (
-              <div className="mt-auto bg-muted/5 border-t border-border/10 px-8 py-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <MetricComparisonFooter
-                  items={resumenFavFooterItems}
-                  columns={resumenFavFooterItems.length}
-                  className="border-none p-0 bg-transparent"
-                />
-              </div>
-            )}
-          </Card>
+              {activeViewTop === 'tendencia' && (
+                <div className="mt-auto bg-muted/5 border-t border-border/10 px-8 py-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <MetricComparisonFooter
+                    items={resumenFavFooterItems}
+                    columns={resumenFavFooterItems.length}
+                    className="border-none p-0 bg-transparent"
+                  />
+                </div>
+              )}
+            </Card>
+          )}
 
           {/* Participation Card */}
           <Card className="border border-border/40 bg-surface shadow-sm rounded-[40px] overflow-hidden group hover:shadow-xl hover:border-border/60 transition-all duration-500 flex flex-col min-h-[600px]">
@@ -2309,7 +2366,10 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                           <span className="text-sm font-bold text-text-primary">{resumenBasePartItem.label}</span>
                           <span className="px-2 py-1 bg-brand/10 text-brand text-xs font-bold rounded-lg">BASE</span>
                         </div>
-                        <div className="text-3xl font-bold text-brand">{resumenBasePartItem.value}%</div>
+                        <div className="text-3xl font-bold text-brand">
+                          {resumenBasePartItem.value}
+                          {resumenBasePartItem.value !== 'Sin respuestas' && '%'}
+                        </div>
                       </div>
                     ) : null}
                     <ResponseStackedBarGroup
@@ -3118,7 +3178,14 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                                 )}
                                               </span>
                                               {!col.isBase && score !== null && baseScore !== null && (
-                                                <DeltaPill value={Number((score - baseScore).toFixed(1))} size="xs" />
+                                                type === 'Cultura' && Math.abs(score - baseScore) < 0.1 ? (
+                                                  <div className="flex items-center gap-1.5 bg-muted/30 px-2 py-0.5 rounded border border-border/10 shadow-sm">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-[#CBD5E1] shrink-0" />
+                                                    <span className="text-[9px] font-bold text-text-secondary/60 uppercase tracking-tighter whitespace-nowrap">Sin variación relevante</span>
+                                                  </div>
+                                                ) : (
+                                                  <DeltaPill value={Number((score - baseScore).toFixed(1))} size="xs" />
+                                                )
                                               )}
                                             </>
                                           )}
@@ -3161,8 +3228,10 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                             <span className="text-xs font-bold text-text-secondary">-4 a -1pp</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className={cn("w-6 h-6 rounded-md border border-border/20", "heatmap-neutral")} />
-                            <span className="text-xs font-bold text-text-secondary">0pp</span>
+                            <div className="w-6 h-6 rounded-md bg-[#F1F5F9] border border-[#CBD5E1] flex items-center justify-center">
+                              <div className="w-1.5 h-1.5 rounded-full bg-[#CBD5E1]" />
+                            </div>
+                            <span className="text-xs font-bold text-text-secondary">Sin variación relevante</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <div className={cn("w-6 h-6 rounded-md border border-border/20", "heatmap-positive-light")} />
@@ -3279,7 +3348,11 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                             "w-full h-12 rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all hover:scale-105",
                                             getHeatmapTone(cell.delta, cell.status)
                                           )}>
-                                            <span className="text-sm font-bold">{formatDelta(cell.delta)}</span>
+                                            {Math.abs(cell.delta) < 0.1 ? (
+                                              <div className="w-1.5 h-1.5 rounded-full bg-[#CBD5E1]" />
+                                            ) : (
+                                              <span className="text-sm font-bold">{formatDelta(cell.delta)}</span>
+                                            )}
                                             <span className="text-xs font-medium opacity-60">n={cell.n}</span>
                                           </div>
                                         </td>
@@ -3552,7 +3625,14 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                                 )}
                                               </span>
                                               {!col.isBase && score !== null && baseScore !== null && (
-                                                <DeltaPill value={Number((score - baseScore).toFixed(1))} size="xs" />
+                                                type === 'Cultura' && Math.abs(score - baseScore) < 0.1 ? (
+                                                  <div className="flex items-center gap-1.5 bg-muted/30 px-2 py-0.5 rounded border border-border/10 shadow-sm">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-[#CBD5E1] shrink-0" />
+                                                    <span className="text-[9px] font-bold text-text-secondary/60 uppercase tracking-tighter whitespace-nowrap">Sin variación relevante</span>
+                                                  </div>
+                                                ) : (
+                                                  <DeltaPill value={Number((score - baseScore).toFixed(1))} size="xs" />
+                                                )
                                               )}
                                             </>
                                           )}
@@ -3835,7 +3915,14 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                                 )}
                                               </span>
                                               {!col.isBase && data !== null && baseData !== null && (
-                                                <DeltaPill value={Number((data.positive - baseData.positive).toFixed(1))} size="xs" />
+                                                type === 'Cultura' && Math.abs(data.positive - baseData.positive) < 0.1 ? (
+                                                  <div className="flex items-center gap-1.5 bg-muted/30 px-2 py-0.5 rounded border border-border/10 shadow-sm">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-[#CBD5E1] shrink-0" />
+                                                    <span className="text-[9px] font-bold text-text-secondary/60 uppercase tracking-tighter whitespace-nowrap">Sin variación relevante</span>
+                                                  </div>
+                                                ) : (
+                                                  <DeltaPill value={Number((data.positive - baseData.positive).toFixed(1))} size="xs" />
+                                                )
                                               )}
                                             </>
                                           )}
@@ -3960,34 +4047,36 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                       <Card key={scenario.label} className="border border-border/40 bg-surface shadow-sm rounded-[2rem] overflow-hidden">
                         <CardHeader className="pb-4">
                           <h4 className="font-semibold text-text-brand">{scenario.label}</h4>
-                          <p className="text-2xl font-bold text-text-primary mt-2">{(scenario.predicted || 0).toFixed(1)}%</p>
+                          <p className="text-2xl font-bold text-text-primary mt-2">
+                            {scenario.predicted !== null ? `${(scenario.predicted || 0).toFixed(1)}%` : <span className="text-text-secondary/40">Sin respuestas</span>}
+                          </p>
                         </CardHeader>
                         <CardContent className="space-y-3">
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-semibold text-positive">Crecimiento</span>
-                              <span className="text-sm font-bold text-positive">{scenario.probabilityGrowth}%</span>
+                              <span className="text-sm font-bold text-positive">{scenario.predicted !== null ? `${scenario.probabilityGrowth}%` : '--%'}</span>
                             </div>
                             <div className="h-2 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full bg-positive rounded-full" style={{ width: `${scenario.probabilityGrowth}%` }} />
+                              <div className="h-full bg-positive rounded-full transition-all duration-500" style={{ width: `${scenario.probabilityGrowth}%`, opacity: scenario.predicted === null ? 0.3 : 1 }} />
                             </div>
                           </div>
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-semibold text-muted-foreground">Estable</span>
-                              <span className="text-sm font-bold text-muted-foreground">{scenario.probabilityStable}%</span>
+                              <span className="text-sm font-bold text-muted-foreground">{scenario.predicted !== null ? `${scenario.probabilityStable}%` : '--%'}</span>
                             </div>
                             <div className="h-2 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full bg-muted rounded-full" style={{ width: `${scenario.probabilityStable}%` }} />
+                              <div className="h-full bg-muted rounded-full transition-all duration-500" style={{ width: `${scenario.probabilityStable}%`, opacity: scenario.predicted === null ? 0.3 : 1 }} />
                             </div>
                           </div>
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-semibold text-destructive">Decrecimiento</span>
-                              <span className="text-sm font-bold text-destructive">{scenario.probabilityDecline}%</span>
+                              <span className="text-sm font-bold text-destructive">{scenario.predicted !== null ? `${scenario.probabilityDecline}%` : '--%'}</span>
                             </div>
                             <div className="h-2 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full bg-destructive rounded-full" style={{ width: `${scenario.probabilityDecline}%` }} />
+                              <div className="h-full bg-destructive rounded-full transition-all duration-500" style={{ width: `${scenario.probabilityDecline}%`, opacity: scenario.predicted === null ? 0.3 : 1 }} />
                             </div>
                           </div>
                         </CardContent>

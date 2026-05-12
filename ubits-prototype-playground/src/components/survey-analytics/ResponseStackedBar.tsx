@@ -30,6 +30,7 @@ export function ResponseStackedBar({
   showLegend = false,
   size = "md",
   isBase = false,
+  emptyMessage,
   className,
 }: ResponseStackedBarProps) {
   
@@ -101,7 +102,7 @@ export function ResponseStackedBar({
           <div className="flex items-center gap-4 pb-0.5">
             {processedSegments.length === 0 ? (
               <span className="text-[10px] text-muted-foreground font-medium italic">
-                Sin respuestas
+                {emptyMessage || "Sin respuestas"}
               </span>
             ) : (
               <>
@@ -207,7 +208,11 @@ export function ResponseStackedBar({
                 className="bg-background/95 text-foreground border border-border/80 shadow-md p-2.5 max-w-[250px] rounded-sm pointer-events-none z-[100]"
               >
                 <div className="text-[12px] font-medium text-foreground/90 leading-snug">
-                  Esta encuesta no tiene respuestas por los filtros que está aplicando
+                  {emptyMessage ? (
+                    emptyMessage === "Sin Dimensión" 
+                      ? "Esta dimensión no fue evaluada en esta encuesta, por lo que no existen datos."
+                      : "Esta encuesta no tiene respuestas por los filtros que está aplicando"
+                  ) : "Esta encuesta no tiene respuestas por los filtros que está aplicando"}
                 </div>
               </TooltipContent>
             </Tooltip>

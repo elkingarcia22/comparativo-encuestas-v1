@@ -72,6 +72,7 @@ export function ResponseStackedBarGroup({
               showPercentages={showPercentages}
               size={compact ? "sm" : size}
               isBase={item.isBase}
+              emptyMessage={item.emptyMessage}
               showLegend={false} // Legend is shared at the group level
             />
           ))

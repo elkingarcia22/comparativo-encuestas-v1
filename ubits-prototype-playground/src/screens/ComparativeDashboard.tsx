@@ -4385,7 +4385,14 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
             return (
               <div className="px-8 py-6 bg-white border-t border-border/10 shrink-0 shadow-[0_-12px_40px_rgba(0,0,0,0.12)] relative z-30">
-                <Button className="w-full h-12 bg-brand hover:bg-brand/90 text-text-inverse font-bold tracking-tight rounded-2xl shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-4 group">
+                <Button
+                  onClick={() => {
+                    if (type === 'Cultura') {
+                      toast.error("¡Vaya! Hubo un problema al generar tu reporte de comentarios. Estamos trabajando para solucionarlo, por favor intenta descargarlo más tarde.");
+                    }
+                  }}
+                  className="w-full h-12 bg-brand hover:bg-brand/90 text-text-inverse font-bold tracking-tight rounded-2xl shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-4 group"
+                >
                   <Download className="h-4 w-4 transition-transform group-hover:-translate-y-1" />
                   Descargar reporte detallado
                 </Button>

@@ -4008,8 +4008,41 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
           {/* Scrollable Content Area */}
           <div className="flex-1 min-h-0 overflow-y-auto bg-background">
-            <div className="p-6 space-y-6 pb-24">
-              <Tabs value={drawerSentimentTab} onValueChange={setDrawerSentimentTab} className="w-full">
+            {/* Check if selected comment has noResponses */}
+            {(() => {
+              const selectedItem = filteredAndSortedSentiment.find(s => s.dimension === selectedDimensionDetail);
+              const hasNoResponses = type === 'Cultura' && selectedItem && (selectedItem as any).noResponses === true;
+
+              if (hasNoResponses) {
+                return (
+                  <div className="h-full flex flex-col items-center justify-center p-6">
+                    <div className="text-center max-w-sm">
+                      <div className="h-16 w-16 rounded-2xl bg-muted/40 flex items-center justify-center mx-auto mb-4">
+                        <MessageSquare className="h-8 w-8 text-text-secondary/40" />
+                      </div>
+                      <h3 className="text-lg font-bold text-text-primary mb-2">
+                        Sin comentarios
+                      </h3>
+                      <p className="text-sm text-text-secondary/60 leading-relaxed">
+                        Esta dimensión no tiene comentarios disponibles por los filtros que estás aplicando. Los comentarios solo están disponibles cuando hay suficientes respuestas en la encuesta.
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+
+              return null;
+            })()}
+
+            {(() => {
+              const selectedItem = filteredAndSortedSentiment.find(s => s.dimension === selectedDimensionDetail);
+              const hasNoResponses = type === 'Cultura' && selectedItem && (selectedItem as any).noResponses === true;
+
+              if (hasNoResponses) return null;
+
+              return (
+                <div className="p-6 space-y-6 pb-24">
+                  <Tabs value={drawerSentimentTab} onValueChange={setDrawerSentimentTab} className="w-full">
                 <div className="flex items-center mb-6 overflow-x-auto scrollbar-hide py-1 sticky top-0 bg-background z-20 -mx-6 px-6">
                   <TabsList className="bg-surface-muted/40 p-1.5 rounded-full border border-border/30 h-auto gap-1">
                     <TabsTrigger
@@ -4338,7 +4371,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                   ))}
                 </div>
               </Tabs>
-            </div>
+              </div>
+              );
+            })()}
           </div>
 
           {/* Drawer Footer Actions - Fixed at bottom */}

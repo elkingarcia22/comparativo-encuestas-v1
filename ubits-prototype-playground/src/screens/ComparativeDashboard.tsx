@@ -593,11 +593,19 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         scoreAdjustment = Math.min(scoreAdjustment, 35);
         responseMultiplier = Math.max(responseMultiplier, 0.4);
 
+        // For Cultura, simulate some dimensions having no responses for specific demographic filters
+        // This is realistic when filtering by a specific leader/location/department with limited respondents
+        const dimNameHash = dim.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+        const filterHash = activeDemographics.map(d => d.values.join('+')).join('-').split('').reduce((a, c) => a + c.charCodeAt(0), 0) || 0;
+        const noResponsesChance = (dimNameHash + filterHash) % 100;
+        const hasNoResponses = type === 'Cultura' && noResponsesChance > 70; // 30% chance for any dimension-filter combination
+
         return {
           ...dim,
           currentScore: Math.max(0, Math.min(100, dim.currentScore - scoreAdjustment)),
-          responses: Math.floor((dim.responses || 0) * responseMultiplier),
-          delta: Number((dim.delta - (scoreAdjustment / 3)).toFixed(1)),
+          responses: hasNoResponses ? 0 : Math.floor((dim.responses || 0) * responseMultiplier),
+          delta: hasNoResponses ? null : Number((dim.delta - (scoreAdjustment / 3)).toFixed(1)),
+          noResponses: hasNoResponses,
           filtered: true
         };
       });
@@ -3002,12 +3010,29 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                   const baseCol = columns.find(c => c.isBase);
                                   const rawBaseScore = baseCol ? (dim as any)[baseCol.dimKey] : dim.currentScore;
                                   const baseScore = rawBaseScore !== null && rawBaseScore !== undefined ? rawBaseScore : null;
+                                  // Check if this dimension has noResponses flag due to filters in Cultura
+                                  const hasNoResponses = type === 'Cultura' && (dim as any).noResponses === true;
 
                                   return (
                                     <TableCell key={col.id} className="text-center">
                                       <div className="flex flex-col items-center gap-1.5">
                                         <div className="flex items-center gap-2">
-                                          {(type === 'Cultura' && (dim.id + col.id).length % 12 === 0 && (dim as any)[col.dimKey] !== undefined) ? (
+                                          {hasNoResponses ? (
+                                            <TooltipProvider delayDuration={0}>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="text-[10px] font-bold text-text-secondary/50 uppercase tracking-wider cursor-help bg-muted/30 px-1.5 py-0.5 rounded border border-border/10 transition-colors hover:bg-muted/50">
+                                                    Sin Respuestas
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-surface border border-border/40 shadow-premium p-3 rounded-xl max-w-[220px]">
+                                                  <p className="text-xs font-semibold leading-relaxed text-text-secondary">
+                                                    Esta encuesta no tiene respuestas por los filtros que estás aplicando.
+                                                  </p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          ) : (type === 'Cultura' && (dim.id + col.id).length % 12 === 0 && (dim as any)[col.dimKey] !== undefined) ? (
                                             <TooltipProvider delayDuration={0}>
                                               <Tooltip>
                                                 <TooltipTrigger asChild>

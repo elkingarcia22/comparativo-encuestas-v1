@@ -1,0 +1,1790 @@
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { 
+  ChevronLeft, 
+  ChevronRight,
+  Share2, 
+  Download, 
+  Settings,
+  FileText,
+  BarChart3,
+  TrendingUp,
+  Users,
+  Star,
+  Layers,
+  MessageSquare,
+  Sparkles,
+  Target,
+  ArrowUpRight,
+  HelpCircle,
+  Filter,
+  ArrowUpDown,
+  LayoutGrid,
+  Table as TableIcon,
+  X,
+  PencilLine,
+  SlidersHorizontal,
+  Plus,
+  Check,
+  Search,
+  ChevronDown,
+} from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ResponseStackedBarGroup } from "@/components/survey-analytics/ResponseStackedBarGroup";
+import { ResponseStackedBar } from "@/components/survey-analytics/ResponseStackedBar";
+import { TrendMetricLineChart } from "@/components/survey-analytics/TrendMetricLineChart";
+import { DeltaPill } from "@/components/survey-analytics/DeltaPill";
+import { MetricComparisonFooter } from "@/components/survey-analytics/MetricComparisonFooter";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+
+import { 
+  COMPARATIVE_FAVORABILITY_DATA, 
+  COMPARATIVE_PARTICIPATION_DATA, 
+  COMPARATIVE_SURVEYS_LIST, 
+  COMPARATIVE_NPS_DATA,
+  COMPARATIVE_DIMENSIONS_DATA,
+  DEMOGRAPHIC_OPTIONS,
+  SEGMENT_CATEGORIES
+} from "@/mocks/comparativeMocks";
+import { 
+  HEATMAP_SEGMENTS, 
+  HEATMAP_DIMENSIONS_DATA, 
+  getHeatmapTone, 
+  formatDelta,
+  getHeatmapData
+} from "@/mocks/heatmapDimensions";
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetDescription,
+  SheetFooter,
+  SheetTrigger,
+  SheetClose
+} from '@/components/ui/sheet';
+import { MultiSelect } from "@/components/forms/MultiSelect";
+import { SingleSelect } from "@/components/forms/SingleSelect";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+
+interface ComparativeDashboardProps {
+  onExit: () => void;
+  onEditSelection?: (step?: number) => void;
+  baseId?: string;
+  comparativeIds?: string[];
+  type?: string;
+}
+
+export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({ 
+  onExit, 
+  onEditSelection,
+  baseId, 
+  comparativeIds = [], 
+  type 
+}) => {
+
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [activeViewTop, setActiveViewTop] = React.useState<'detalle' | 'tendencia'>('detalle');
+  const [activeViewTopPart, setActiveViewTopPart] = React.useState<'detalle' | 'tendencia'>('detalle');
+  const [activeViewTopNPS, setActiveViewTopNPS] = React.useState<'detalle' | 'tendencia'>('detalle');
+  const [showTopCards, setShowTopCards] = React.useState(true);
+
+  // Dimensions Tab State
+  const [selectedDimensions, setSelectedDimensions] = React.useState<string[]>(COMPARATIVE_DIMENSIONS_DATA.map(d => d.name));
+  const [sortCriteria, setSortCriteria] = React.useState<string>("mejora");
+
+  const sortLabels: Record<string, string> = {
+    mejora: "Mayor mejora",
+    caida: "Mayor caída",
+    alto: "Puntaje más alto",
+    respuestas: "Más respuestas"
+  };
+  const [activeTab, setActiveTab] = React.useState<string>('favorabilidad');
+  const [dimensionsView, setDimensionsView] = React.useState<'table' | 'heatmap'>('table');
+  const [heatmapSegment, setHeatmapSegment] = React.useState<string>('Área');
+  // Tab-specific Filtering State
+  type TabId = 'favorabilidad' | 'participacion' | 'nps' | 'dimensionesTable' | 'dimensionesHeatmap';
+  
+  interface TabFilters {
+    demographics: Record<string, string[]>;
+    segments: Array<{variable: string; values: string[]}>;
+  }
+
+  const initialDemographics = {
+    area: [], lider: [], rol: [], ciudad: [], pais: [],
+    edad: [], sexo: [], columnaA: [], columnaB: []
+  };
+
+  const initialSegments = [{ variable: '', values: [] }];
+
+  const [tabFilters, setTabFilters] = React.useState<Record<TabId, TabFilters>>({
+    favorabilidad: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
+    participacion: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
+    nps:           { demographics: { ...initialDemographics }, segments: [...initialSegments] },
+    dimensionesTable: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
+    dimensionesHeatmap: { demographics: { ...initialDemographics }, segments: [...initialSegments] },
+  });
+
+  const [activeFilterTab, setActiveFilterTab] = React.useState<TabId>('favorabilidad');
+  const [isFiltersDrawerOpen, setIsFiltersDrawerOpen] = React.useState(false);
+  const [isSegmentDrawerOpen, setIsSegmentDrawerOpen] = React.useState(false);
+
+  // Helper to get active filters count for a specific tab
+  const getActiveFiltersCount = React.useCallback((tabId: TabId) => {
+    const demCount = Object.values(tabFilters[tabId].demographics).reduce((acc, curr) => acc + (curr?.length || 0), 0);
+    const segCount = tabFilters[tabId].segments.filter(s => s.variable && s.values.length > 0).length;
+    return { demographics: demCount, segments: segCount, total: demCount + segCount };
+  }, [tabFilters]);
+
+  const updateTabDemographics = (tabId: TabId, category: string, values: string[]) => {
+    setTabFilters(prev => ({
+      ...prev,
+      [tabId]: {
+        ...prev[tabId],
+        demographics: { ...prev[tabId].demographics, [category]: values }
+      }
+    }));
+  };
+
+  const updateTabSegments = (tabId: TabId, segments: any[]) => {
+    setTabFilters(prev => ({
+      ...prev,
+      [tabId]: {
+        ...prev[tabId],
+        segments
+      }
+    }));
+  };
+
+  const clearTabFilters = (tabId: TabId) => {
+    setTabFilters(prev => ({
+      ...prev,
+      [tabId]: {
+        demographics: { ...initialDemographics },
+        segments: [...initialSegments]
+      }
+    }));
+  };
+
+  const visibleTabId = React.useMemo(() => {
+    if (activeTab === 'dimensiones') {
+      return dimensionsView === 'heatmap' ? 'dimensionesHeatmap' : 'dimensionesTable';
+    }
+    return activeTab as TabId;
+  }, [activeTab, dimensionsView]);
+
+  const toggleDimension = (name: string) => {
+    setSelectedDimensions(prev => 
+      prev.includes(name) 
+        ? prev.filter(d => d !== name) 
+        : [...prev, name]
+    );
+  };
+
+  const selectAllDimensions = () => {
+    setSelectedDimensions(COMPARATIVE_DIMENSIONS_DATA.map(d => d.name));
+  };
+
+  const deselectAllDimensions = () => {
+    setSelectedDimensions([]);
+  };
+
+  // Filter and Sort Logic
+  const filteredAndSortedDimensions = React.useMemo(() => {
+    let result = COMPARATIVE_DIMENSIONS_DATA.filter(d => selectedDimensions.includes(d.name));
+
+    // Apply Search Filter
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      result = result.filter(d => 
+        d.name.toLowerCase().includes(lowerSearch) || 
+        (d.description && d.description.toLowerCase().includes(lowerSearch))
+      );
+    }
+
+    const { total: totalFilters } = getActiveFiltersCount(visibleTabId as any);
+    
+    // Apply shifts based on local filters
+    if (totalFilters > 0) {
+      result = result.map(dim => {
+        const shift = (totalFilters * 2.5) % 10;
+        return {
+          ...dim,
+          currentScore: Math.round(Math.max(0, Math.min(100, dim.currentScore - shift))),
+          delta: Number((dim.delta - (shift / 2)).toFixed(1))
+        };
+      });
+    }
+
+    // Simulate filtering effect
+    if (totalFilters > 0) {
+      result = result.map(dim => {
+        const hash = (totalFilters * dim.name.length) % 5;
+        return {
+          ...dim,
+          currentScore: Math.max(0, Math.min(100, dim.currentScore - hash)),
+          responses: Math.floor((dim.responses || 0) * (0.8 - (hash / 10))),
+          delta: dim.delta - hash
+        };
+      });
+    }
+
+    switch (sortCriteria) {
+      case "mejora":
+        result.sort((a, b) => b.delta - a.delta);
+        break;
+      case "caida":
+        result.sort((a, b) => a.delta - b.delta);
+        break;
+      case "alto":
+        result.sort((a, b) => b.currentScore - a.currentScore);
+        break;
+      case "respuestas":
+        result.sort((a, b) => (b.responses || 0) - (a.responses || 0));
+        break;
+    }
+    return result;
+  }, [selectedDimensions, sortCriteria, tabFilters, visibleTabId, searchTerm]);
+
+  // Heatmap Data Logic
+  const heatmapData = React.useMemo(() => {
+    // 1. Determine which segments (columns) to show
+    const variable = heatmapSegment;
+    
+    const filterKeyMap: Record<string, string> = {
+      'Área': 'area',
+      'Líder': 'lider',
+      'Rol': 'rol',
+      'Ciudad': 'ciudad',
+      'País': 'pais',
+      'Edad': 'edad',
+      'Sexo': 'sexo',
+      'Columna A': 'columnaA',
+      'Columna B': 'columnaB',
+    };
+    
+    const filterKey = filterKeyMap[variable] || 'area';
+    const activeFiltersForThisVar = tabFilters.dimensionesHeatmap.demographics[filterKey] || [];
+    const allPossibleValues = DEMOGRAPHIC_OPTIONS[filterKey as keyof typeof DEMOGRAPHIC_OPTIONS] || [];
+    
+    // Cross-filtering logic: If viewing by Area, but we have a Leader filter, filter areas.
+    let valuesToShow = allPossibleValues;
+    const currentDemographics = tabFilters.dimensionesHeatmap.demographics;
+    
+    if (variable === 'Área') {
+      const leaderValues = currentDemographics.lider || [];
+      if (leaderValues.length > 0) {
+        // Logic: If filtering by leader, only show the area(s) they belong to.
+        valuesToShow = allPossibleValues.filter(area => {
+          return leaderValues.some(lider => {
+            const leaderHash = lider.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const areaHash = area.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            return (leaderHash + areaHash) % 4 === 0;
+          });
+        });
+      }
+    } else if (variable === 'Líder') {
+      const areaValues = currentDemographics.area || [];
+      if (areaValues.length > 0) {
+        valuesToShow = allPossibleValues.filter(lider => {
+          return areaValues.some(area => {
+            const leaderHash = lider.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const areaHash = area.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            return (leaderHash + areaHash) % 4 === 0;
+          });
+        });
+      }
+    }
+
+    // Explicit demographic filter for the current variable overrides cross-filtering
+    if (activeFiltersForThisVar.length > 0) {
+      valuesToShow = activeFiltersForThisVar;
+    }
+
+    const segments = valuesToShow.map(v => ({ 
+      id: v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_'), 
+      label: v 
+    }));
+
+    // Filter dimensions by search term
+    const visibleDimensions = COMPARATIVE_DIMENSIONS_DATA.filter(d => {
+      if (!searchTerm) return true;
+      const lowerSearch = searchTerm.toLowerCase();
+      return d.name.toLowerCase().includes(lowerSearch) || 
+             (d.description && d.description.toLowerCase().includes(lowerSearch));
+    });
+
+    // 2. Count active heatmap segments (local filters)
+    const activeHeatmapFilters = tabFilters.dimensionesHeatmap.segments.filter(s => s.variable && s.values.length > 0);
+    const hasHeatmapFilters = activeHeatmapFilters.length > 0;
+    const { total: totalFilters } = getActiveFiltersCount('dimensionesHeatmap');
+
+    // 3. Build the data matrix
+    const currentData = visibleDimensions.map((dimBase) => {
+      const segmentsData: Record<string, any> = {};
+      
+      segments.forEach((seg) => {
+        const filtersStr = JSON.stringify(tabFilters.dimensionesHeatmap.demographics) + 
+                           JSON.stringify(activeHeatmapFilters) + 
+                           heatmapSegment + 
+                           dimBase.name + 
+                           seg.label;
+        
+        let hash = 0;
+        for (let i = 0; i < filtersStr.length; i++) {
+          hash = ((hash << 5) - hash) + filtersStr.charCodeAt(i);
+          hash |= 0;
+        }
+        hash = Math.abs(hash);
+        
+        let delta = (hash % 31) - 15; // -15 to +15
+        let n = 20 + (hash % 200);
+        
+        if (totalFilters > 0 || hasHeatmapFilters) {
+          const shiftFactor = (totalFilters + activeHeatmapFilters.length) * 3;
+          delta = delta + (hash % 11) - 5 + (shiftFactor % 7);
+          n = Math.max(5, Math.floor(n * (0.4 + (hash % 40) / 100)));
+        }
+
+        segmentsData[seg.id] = { 
+          delta, 
+          n, 
+          status: undefined 
+        };
+      });
+
+      return {
+        id: dimBase.id,
+        name: dimBase.name,
+        segments: segmentsData
+      };
+    });
+
+    return { segments, data: currentData };
+  }, [heatmapSegment, tabFilters.dimensionesHeatmap, searchTerm, getActiveFiltersCount]);
+
+
+
+  // Lookup survey names
+  const baseSurvey = COMPARATIVE_SURVEYS_LIST.find(s => s.id === baseId);
+  const selectedComparativeSurveys = COMPARATIVE_SURVEYS_LIST.filter(s => comparativeIds.includes(s.id));
+
+  // 1. Simulation Helper for Demographic Filters
+  const applyFilters = React.useCallback((data: any, filterCount: number, isNPS: boolean = false) => {
+    if (filterCount === 0) return data;
+    
+    // Create a clone to avoid mutating mocks
+    const cloned = JSON.parse(JSON.stringify(data));
+    const factor = (filterCount * 3.5) % 12; // deterministic shift
+    const minVal = isNPS ? -100 : 0;
+    
+    // Adjust comparisons (Summary Footer)
+    if (cloned.comparisons) {
+      cloned.comparisons = cloned.comparisons.map((c: any, idx: number) => {
+        const shift = factor + (idx * 1.5);
+        const newValue = Math.round(Math.max(minVal, Math.min(100, c.value - shift)));
+        return {
+          ...c,
+          value: newValue,
+          delta: Number((c.delta - (shift / 4)).toFixed(1)),
+          trend: (c.delta - (shift / 4)) >= 0 ? 'up' : 'down'
+        };
+      });
+    }
+    
+    // Adjust distributionByPeriod (Stacked Bars)
+    if (cloned.distributionByPeriod) {
+      cloned.distributionByPeriod = cloned.distributionByPeriod.map((p: any) => {
+        const pFactor = factor + (p.period.length % 3);
+        let posAdjust = Math.round(pFactor);
+        
+        const updatedSegments = p.segments.map((s: any) => {
+           if (s.tone === 'positive' || s.tone === 'promoter') {
+             return { ...s, value: Math.max(0, s.value - posAdjust) };
+           }
+           if (s.tone === 'negative' || s.tone === 'detractor') {
+             return { ...s, value: Math.min(100, s.value + posAdjust) };
+           }
+           return s;
+        });
+
+        // Normalize to 100%
+        const total = updatedSegments.reduce((acc: number, s: any) => acc + s.value, 0);
+        if (total !== 100 && total > 0) {
+          updatedSegments[0].value += (100 - total);
+        }
+
+        return { ...p, segments: updatedSegments };
+      });
+    }
+
+    // Adjust trendData (Line Charts)
+    if (cloned.trendData && cloned.trendData.data) {
+      cloned.trendData.data = cloned.trendData.data.map((val: number, idx: number) => {
+        const tShift = factor + (idx * 0.8);
+        return Math.round(Math.max(minVal, Math.min(100, val - tShift)));
+      });
+    }
+    
+    return cloned;
+  }, []);
+
+  const favData = React.useMemo(() => 
+    applyFilters(COMPARATIVE_FAVORABILITY_DATA, getActiveFiltersCount('favorabilidad').total), 
+    [tabFilters.favorabilidad, applyFilters, getActiveFiltersCount]
+  );
+  
+  const partData = React.useMemo(() => 
+    applyFilters(COMPARATIVE_PARTICIPATION_DATA, getActiveFiltersCount('participacion').total), 
+    [tabFilters.participacion, applyFilters, getActiveFiltersCount]
+  );
+  
+  const npsData = React.useMemo(() => 
+    applyFilters(COMPARATIVE_NPS_DATA, getActiveFiltersCount('nps').total, true), 
+    [tabFilters.nps, applyFilters, getActiveFiltersCount]
+  );
+
+  // --- Favorability Prep ---
+  const favTrendSeries = React.useMemo(() => favData?.trendData ? [{
+    id: 'favorability-trend',
+    label: 'Favorabilidad',
+    data: favData.trendData.data || [],
+    tone: 'primary' as const
+  }] : [], [favData]);
+
+  const favFooterItems = React.useMemo(() => (favData?.comparisons || []).map(c => ({
+    label: c.label,
+    value: `${c.value}%`,
+    delta: c.delta,
+    tone: c.trend === 'up' ? 'positive' : c.trend === 'down' ? 'negative' : 'neutral'
+  })), [favData]);
+
+  const distributionItems = React.useMemo(() => (favData?.distributionByPeriod || []).map((item, index) => ({
+    id: `fav-period-${index}`,
+    label: item.period,
+    segments: (item.segments || []).map(s => ({
+      ...s,
+      tone: s.tone as any
+    }))
+  })), [favData]);
+
+  // --- Participation Prep ---
+  const partTrendSeries = React.useMemo(() => partData?.trendData ? [{
+    id: 'participation-trend',
+    label: 'Participación',
+    data: partData.trendData.data || [],
+    tone: 'primary' as const
+  }] : [], [partData]);
+
+  const partFooterItems = React.useMemo(() => (partData?.comparisons || []).map(c => ({
+    label: c.label,
+    value: `${c.value}%`,
+    delta: c.delta,
+    tone: c.trend === 'up' ? 'positive' : c.trend === 'down' ? 'negative' : 'neutral'
+  })), [partData]);
+
+  const partDistributionItems = React.useMemo(() => (partData?.distributionByPeriod || []).map((item, index) => ({
+    id: `part-period-${index}`,
+    label: item.period,
+    segments: (item.segments || []).map(s => ({
+      ...s,
+      tone: s.tone as any
+    }))
+  })), [partData]);
+
+  // --- NPS Prep ---
+  const npsDistributionItems = React.useMemo(() => (npsData?.distributionByPeriod || []).map((item, index) => ({
+    id: `nps-period-${index}`,
+    label: item.period,
+    segments: (item.segments || []).map(s => ({
+      ...s,
+      tone: s.tone as any
+    }))
+  })), [npsData]);
+
+  const npsTrendSeries = React.useMemo(() => npsData?.trendData ? [{
+    id: 'nps-trend',
+    label: 'NPS',
+    data: npsData.trendData.data || [],
+    tone: 'primary' as const
+  }] : [], [npsData]);
+
+  const npsFooterItems = React.useMemo(() => (npsData?.comparisons || []).map(c => ({
+    label: c.label,
+    value: c.value.toString(),
+    delta: c.delta,
+    tone: c.trend === 'up' ? 'positive' : c.trend === 'down' ? 'negative' : 'neutral'
+  })), [npsData]);
+
+  return (
+    <div className="flex flex-col h-screen bg-background overflow-hidden animate-in fade-in duration-700">
+      {/* Heatmap Styles - Defined here to avoid modifying tokens.css */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .heatmap-negative-strong { background-color: hsl(var(--color-negative-hsl) / 0.18); color: hsl(var(--color-negative-hsl)); }
+          .heatmap-negative-light  { background-color: hsl(var(--color-negative-hsl) / 0.09); color: hsl(var(--color-negative-hsl) / 0.85); }
+          .heatmap-neutral         { background-color: hsl(var(--color-surface-subtle-hsl)); color: #979ba3; }
+          .heatmap-positive-light  { background-color: hsl(var(--color-positive-hsl) / 0.09); color: hsl(var(--color-positive-hsl) / 0.85); }
+          .heatmap-positive-strong { background-color: hsl(var(--color-positive-hsl) / 0.18); color: hsl(var(--color-positive-hsl)); }
+          .heatmap-private         { background-color: hsl(var(--color-surface-nav-hsl) / 0.04); color: #979ba3; }
+          .heatmap-low-n           { background-color: hsl(var(--color-warning-hsl) / 0.09); color: hsl(var(--color-warning-hsl)); }
+        `
+      }} />
+      {/* 1. Sleek Dashboard Header */}
+      {/* 1. Refined Premium Header */}
+      <header className="h-24 px-4 sm:px-10 bg-white border-b border-border/60 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center gap-8 h-full">
+          <div className="flex items-center gap-5">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onExit}
+              className="h-10 w-10 rounded-xl hover:bg-muted/5 text-text-secondary transition-all active:scale-95"
+            >
+              <X className="h-6 w-6" />
+            </Button>
+            
+            <div className="h-8 w-[1px] bg-border/40" />
+            
+            <div className="flex flex-col">
+              <h1 className="text-xl font-black text-text-primary tracking-tight leading-none uppercase">
+                Análisis Comparativo
+              </h1>
+              <p className="text-[9px] font-black text-text-secondary/40 uppercase tracking-[0.2em] mt-1.5">
+                Contrasta el pulso de tu organización en múltiples periodos
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" className="h-11 px-6 gap-2.5 text-[10px] font-black uppercase tracking-wider text-text-secondary hover:bg-muted/5 rounded-xl transition-all">
+            <Share2 className="h-4 w-4" />
+            <span>Compartir</span>
+          </Button>
+          <Button variant="outline" size="sm" className="h-11 px-6 gap-2.5 text-[10px] font-black uppercase tracking-wider text-primary border-primary/20 hover:bg-primary/5 rounded-xl shadow-sm transition-all active:scale-95">
+            <Download className="h-4 w-4" />
+            <span>Exportar Informe</span>
+          </Button>
+        </div>
+      </header>
+
+      <main className="flex-1 overflow-auto scrollbar-hide bg-background">
+        <Sheet open={isFiltersDrawerOpen} onOpenChange={setIsFiltersDrawerOpen}>
+          <SheetContent 
+            side="right" 
+            showCloseButton={false}
+            className="w-[460px] sm:max-w-[460px] h-full p-0 border-l border-border/20 bg-surface shadow-drawer outline-none"
+          >
+            <div className="flex flex-col h-full w-full overflow-hidden relative bg-surface">
+              {/* Drawer Header */}
+              <div className="px-8 py-10 border-b border-border/10 bg-surface shrink-0 flex flex-col gap-2 relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1">
+                    <SheetTitle className="text-2xl font-black tracking-tight text-text-primary uppercase">
+                      {activeFilterTab === 'dimensionesHeatmap' ? 'Segmentación' : 'Filtros Demográficos'}
+                    </SheetTitle>
+                    <SheetDescription className="sr-only">
+                      Configure los filtros demográficos y de segmentación avanzada para personalizar los datos del panel actual.
+                    </SheetDescription>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setIsFiltersDrawerOpen(false)}
+                    className="rounded-xl hover:bg-muted/10 h-10 w-10 transition-all"
+                  >
+                    <X className="h-5 w-5 text-text-secondary" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Scrollable Content Area */}
+              <div className="flex-1 overflow-y-auto bg-surface min-h-0 scrollbar-thin scrollbar-thumb-border/20 scrollbar-track-transparent">
+                <div className="px-8 py-10 flex flex-col gap-10 pb-32">
+                  <section className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="flex flex-col gap-6">
+                      {activeFilterTab === 'dimensionesHeatmap' ? (
+                        /* Simplified Heatmap Segmentation Logic */
+                        <div className="space-y-6">
+                          {tabFilters[activeFilterTab].segments.map((seg, idx) => {
+                            const availableValues = seg.variable 
+                              ? (DEMOGRAPHIC_OPTIONS[SEGMENT_CATEGORIES.find(c => c.label === seg.variable)?.id as keyof typeof DEMOGRAPHIC_OPTIONS] || []) 
+                              : [];
+                            
+                            return (
+                              <div key={idx} className="space-y-5 p-6 rounded-2xl border border-border/20 bg-muted/5 relative group/segitem transition-all hover:border-border/40 hover:bg-muted/10 shadow-sm">
+                                {tabFilters[activeFilterTab].segments.length > 1 && (
+                                  <button
+                                    onClick={() => updateTabSegments(activeFilterTab, tabFilters[activeFilterTab].segments.filter((_, i) => i !== idx))}
+                                    className="absolute top-4 right-4 h-7 w-7 rounded-full bg-white border border-border/20 shadow-sm hover:bg-negative/10 hover:text-negative flex items-center justify-center transition-all opacity-0 group-hover/segitem:opacity-100 z-10"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                                
+                                <div className="space-y-3">
+                                  <Label className="text-[10px] font-black text-text-secondary/60 uppercase tracking-widest">Seleccionar demográfico</Label>
+                                  <SingleSelect
+                                    value={seg.variable}
+                                    onValueChange={(val) => updateTabSegments(activeFilterTab, 
+                                      tabFilters[activeFilterTab].segments.map((s, i) => i === idx ? { variable: val, values: [] } : s)
+                                    )}
+                                    options={SEGMENT_CATEGORIES.map(c => ({ label: c.label, value: c.label }))}
+                                    placeholder="Seleccionar demográfico..."
+                                    className="w-full h-12"
+                                  />
+                                </div>
+
+                                {seg.variable && (
+                                  <div className="space-y-3 animate-in fade-in slide-in-from-top-1 duration-300">
+                                    <Label className="text-[10px] font-black text-text-secondary/60 uppercase tracking-widest">Valor</Label>
+                                    <MultiSelect
+                                      options={availableValues.map(v => ({ label: v, value: v }))}
+                                      value={seg.values}
+                                      onValueChange={(vals) => updateTabSegments(activeFilterTab,
+                                        tabFilters[activeFilterTab].segments.map((s, i) => i === idx ? { ...s, values: vals } : s)
+                                      )}
+                                      placeholder={`Elegir valores de ${seg.variable}...`}
+                                      className="w-full h-12"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+
+                          {tabFilters[activeFilterTab].segments.length < 6 && (
+                            <Button
+                              variant="outline"
+                              onClick={() => updateTabSegments(activeFilterTab, [...tabFilters[activeFilterTab].segments, { variable: '', values: [] }])}
+                              className="w-full h-16 flex items-center justify-center gap-3 border-2 border-dashed border-border/30 rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] text-text-muted hover:border-brand/40 hover:text-brand hover:bg-brand/5 transition-all shadow-sm group"
+                            >
+                              <Plus className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                              Agregar Segmentación
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        /* Standard Demographic Filters for other tabs */
+                        <div className="space-y-8">
+                          {SEGMENT_CATEGORIES.map((field) => (
+                            <div key={field.id} className="space-y-3">
+                              <Label className="text-[10px] font-black text-text-secondary/60 uppercase tracking-widest">{field.label}</Label>
+                              <MultiSelect
+                                options={(DEMOGRAPHIC_OPTIONS[field.id as keyof typeof DEMOGRAPHIC_OPTIONS] || []).map(v => ({ label: v, value: v }))}
+                                value={tabFilters[activeFilterTab].demographics[field.id] || []}
+                                onValueChange={(vals) => updateTabDemographics(activeFilterTab, field.id, vals)}
+                                placeholder={`Seleccionar ${field.label}...`}
+                                className="w-full h-12"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                </div>
+              </div>
+
+              {/* Drawer Footer - Fixed at bottom */}
+              <div className="absolute bottom-0 left-0 right-0 px-8 py-8 border-t border-border/10 bg-white/90 backdrop-blur-md flex flex-col gap-4 z-20 shadow-[0_-12px_40px_-20px_rgba(0,0,0,0.15)]">
+                <SheetClose asChild>
+                  <Button 
+                    className="w-full bg-brand hover:bg-brand-hover text-white h-14 text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-brand/20 transition-all active:scale-[0.98]"
+                  >
+                    Aplicar Cambios
+                  </Button>
+                </SheetClose>
+
+                <Button 
+                  onClick={() => clearTabFilters(activeFilterTab)}
+                  disabled={getActiveFiltersCount(activeFilterTab).total === 0}
+                  variant="ghost"
+                  className="w-full h-12 text-[10px] font-black uppercase tracking-widest text-text-secondary/40 hover:text-brand hover:bg-brand/5 rounded-xl transition-all"
+                >
+                  Restablecer Configuración Local
+                </Button>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        <div className="w-full bg-white border-b border-border shadow-sm sticky top-0 z-40">
+          <div className="flex items-center h-auto min-h-[5rem] px-4">
+
+              {/* Item 1: Categoría (Step 1) */}
+              <button 
+                onClick={() => onEditSelection?.(1)}
+                className="flex items-center gap-4 px-8 h-full border-r border-border/30 hover:bg-muted/5 transition-all group shrink-0"
+              >
+                <div className="flex items-center gap-3">
+                  <Layers className="h-4 w-4 text-text-secondary group-hover:text-primary transition-colors" />
+                  <div className="flex flex-col items-start">
+                    <span className="text-[8px] font-black text-text-secondary/40 uppercase tracking-[0.2em] mb-0.5 flex items-center gap-1.5">
+                      Categoría
+                      <PencilLine className="h-2 w-2 opacity-0 group-hover:opacity-100 transition-all text-primary" />
+                    </span>
+                    <span className="text-[11px] font-black text-text-primary uppercase tracking-tight group-hover:text-primary transition-colors">{type || 'Clima'}</span>
+                  </div>
+                </div>
+                <ChevronRight className="h-3 w-3 text-text-secondary/20 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+              </button>
+
+              {/* Item 2: Referencia Base (Step 2) */}
+              <button 
+                onClick={() => onEditSelection?.(2)}
+                className="flex items-center gap-4 px-8 h-full border-r border-border/30 hover:bg-muted/5 transition-all group shrink-0"
+              >
+                <div className="flex items-center gap-3">
+                  <Target className="h-4 w-4 text-brand group-hover:text-brand-hover transition-colors" />
+                  <div className="flex flex-col items-start">
+                    <span className="text-[8px] font-black text-text-secondary/40 uppercase tracking-[0.2em] mb-0.5 flex items-center gap-1.5">
+                      Referencia Base
+                      <PencilLine className="h-2 w-2 opacity-0 group-hover:opacity-100 transition-all text-brand" />
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-black text-text-primary uppercase tracking-tight group-hover:text-brand transition-colors">{baseSurvey?.name || 'Q4 2025'}</span>
+                      <Badge className="bg-brand/10 text-brand border-none text-[8px] font-black uppercase h-4 px-1.5 rounded shadow-none shrink-0">Master</Badge>
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              {/* Item 3: Comparativa Activa (Step 3) */}
+              <button 
+                onClick={() => onEditSelection?.(3)}
+                className="flex items-center gap-6 px-8 h-full hover:bg-muted/5 transition-all group min-w-0"
+              >
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <TrendingUp className="h-4 w-4 text-text-secondary group-hover:text-primary transition-colors shrink-0" />
+                  <div className="flex flex-col items-start min-w-0 flex-1">
+                    <span className="text-[8px] font-black text-text-secondary/40 uppercase tracking-[0.2em] mb-0.5 flex items-center gap-1.5 whitespace-nowrap">
+                      Comparativas Activas ({selectedComparativeSurveys.length})
+                      <PencilLine className="h-2 w-2 opacity-0 group-hover:opacity-100 transition-all text-primary" />
+                    </span>
+                    <div className="flex items-center gap-x-3 gap-y-1 py-1 flex-nowrap overflow-hidden">
+                      {(selectedComparativeSurveys.length > 0 ? selectedComparativeSurveys : [{id: '1', name: 'Q3 2025'}]).map((s, i, arr) => (
+                        <React.Fragment key={s.id}>
+                          <span className="text-[11px] font-black text-text-primary uppercase tracking-tight group-hover:text-primary transition-colors whitespace-nowrap">
+                            {s.name}
+                          </span>
+                          {i < arr.length - 1 && <div className="h-3 w-[1px] bg-border/40 shrink-0" />}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="h-3 w-3 text-text-secondary/20 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+              </button>
+              
+              <div className="flex-1" />
+          </div>
+        </div>
+
+        {/* 2.5 Subtle Toggle for Top Cards */}
+        <div className="px-4 sm:px-8 pt-4 flex justify-center">
+          <button
+            onClick={() => setShowTopCards(!showTopCards)}
+            className="group flex items-center gap-3 px-4 py-2 rounded-xl bg-transparent hover:bg-surface/80 transition-all duration-300"
+            title={showTopCards ? "Ocultar tarjetas superiores" : "Mostrar tarjetas superiores"}
+          >
+            <div className={cn(
+              "h-[1px] w-10 bg-border/40 group-hover:bg-primary/40 transition-all duration-300",
+              showTopCards ? "bg-primary/30" : "bg-border/20"
+            )} />
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-text-secondary/30 group-hover:text-primary transition-colors">
+              {showTopCards ? "Ocultar Resumen" : "Ver Resumen"}
+            </span>
+            <div className={cn(
+              "h-[1px] w-10 bg-border/40 group-hover:bg-primary/40 transition-all duration-300",
+              showTopCards ? "bg-primary/30" : "bg-border/20"
+            )} />
+          </button>
+        </div>
+
+        {/* 2.5 Top Summary Cards Grid - High Density side-by-side */}
+        {showTopCards && (
+        <div className="px-4 sm:px-10 pt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+           {/* Favorability Card */}
+           <Card className="border border-border/40 bg-surface shadow-sm rounded-[40px] overflow-hidden group hover:shadow-xl hover:border-border/60 transition-all duration-500 flex flex-col min-h-[600px]">
+             <CardHeader className="px-8 pt-8 pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-inner">
+                      <BarChart3 className="h-6 w-6" />
+                    </div>
+                    <div className="flex flex-col">
+                      <h3 className="text-sm font-black text-text-primary uppercase tracking-wider">Favorabilidad</h3>
+                      <span className="text-[10px] font-bold text-text-secondary/40 uppercase tracking-[0.2em]">Resumen comparativo</span>
+                    </div>
+                  </div>
+                
+                  {/* Segmented Control Toggle */}
+                  <div className="bg-muted/30 p-1.5 rounded-xl border border-border/5 flex items-center gap-1">
+                    <button 
+                      onClick={() => setActiveViewTop('detalle')}
+                      className={cn(
+                        "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                        activeViewTop === 'detalle' ? "bg-white text-primary shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
+                      )}
+                    >
+                      Detalle
+                    </button>
+                    <button 
+                      onClick={() => setActiveViewTop('tendencia')}
+                      className={cn(
+                        "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                        activeViewTop === 'tendencia' ? "bg-white text-primary shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
+                      )}
+                    >
+                      Tendencia
+                    </button>
+                  </div>
+                </div>
+             </CardHeader>
+
+             <CardContent className="flex-1 px-8 pb-6">
+                <div className="h-full flex flex-col justify-center relative">
+                  {activeViewTop === 'detalle' ? (
+                    <div className="animate-in fade-in slide-in-from-left-2 duration-500 h-full flex flex-col justify-center">
+                      <ResponseStackedBarGroup 
+                        items={distributionItems}
+                        showLegend={false}
+                        showPercentages
+                        size="md"
+                        compact
+                        className="space-y-8"
+                      />
+                    </div>
+                  ) : (
+                    <div className="animate-in fade-in slide-in-from-right-2 duration-500 h-full flex flex-col justify-center">
+                      <TrendMetricLineChart 
+                        series={favTrendSeries}
+                        height={280}
+                        showLegend={false}
+                        showComparison={false}
+                        standalone
+                      />
+                    </div>
+                  )}
+                </div>
+             </CardContent>
+
+             <div className="mt-auto bg-muted/5 border-t border-border/10 px-8 py-6">
+               <MetricComparisonFooter 
+                 items={favFooterItems}
+                 columns={3}
+                 className="border-none p-0 bg-transparent"
+               />
+             </div>
+           </Card>
+
+           {/* Participation Card */}
+           <Card className="border border-border/40 bg-surface shadow-sm rounded-[40px] overflow-hidden group hover:shadow-xl hover:border-border/60 transition-all duration-500 flex flex-col min-h-[600px]">
+             <CardHeader className="px-8 pt-8 pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-inner">
+                      <Users className="h-6 w-6" />
+                    </div>
+                    <div className="flex flex-col">
+                      <h3 className="text-sm font-black text-text-primary uppercase tracking-wider">Participación</h3>
+                      <span className="text-[10px] font-bold text-text-secondary/40 uppercase tracking-[0.2em]">Tasa de respuesta</span>
+                    </div>
+                  </div>
+                
+                  {/* Segmented Control Toggle */}
+                  <div className="bg-muted/30 p-1.5 rounded-xl border border-border/5 flex items-center gap-1">
+                    <button 
+                      onClick={() => setActiveViewTopPart('detalle')}
+                      className={cn(
+                        "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                        activeViewTopPart === 'detalle' ? "bg-white text-primary shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
+                      )}
+                    >
+                      Detalle
+                    </button>
+                    <button 
+                      onClick={() => setActiveViewTopPart('tendencia')}
+                      className={cn(
+                        "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                        activeViewTopPart === 'tendencia' ? "bg-white text-primary shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
+                      )}
+                    >
+                      Tendencia
+                    </button>
+                  </div>
+                </div>
+             </CardHeader>
+
+             <CardContent className="flex-1 px-8 pb-6">
+                <div className="h-full flex flex-col justify-center relative">
+                  {activeViewTopPart === 'detalle' ? (
+                    <div className="animate-in fade-in slide-in-from-left-2 duration-500 h-full flex flex-col justify-center">
+                      <ResponseStackedBarGroup 
+                        items={partDistributionItems}
+                        showLegend={false}
+                        showPercentages
+                        size="md"
+                        compact
+                        className="space-y-8"
+                      />
+                    </div>
+                  ) : (
+                    <div className="animate-in fade-in slide-in-from-right-2 duration-500 h-full flex flex-col justify-center">
+                      <TrendMetricLineChart 
+                        series={partTrendSeries}
+                        height={280}
+                        showLegend={false}
+                        showComparison={false}
+                        standalone
+                      />
+                    </div>
+                  )}
+                </div>
+             </CardContent>
+
+             <div className="mt-auto bg-muted/5 border-t border-border/10 px-8 py-6">
+               <MetricComparisonFooter 
+                 items={partFooterItems}
+                 columns={3}
+                 className="border-none p-0 bg-transparent"
+               />
+             </div>
+           </Card>
+
+           {/* NPS Card */}
+           <Card className="border border-border/40 bg-surface shadow-sm rounded-[40px] overflow-hidden group hover:shadow-xl hover:border-border/60 transition-all duration-500 flex flex-col min-h-[600px]">
+             <CardHeader className="px-8 pt-8 pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-inner">
+                      <Star className="h-6 w-6" />
+                    </div>
+                    <div className="flex flex-col">
+                      <h3 className="text-sm font-black text-text-primary uppercase tracking-wider">NPS</h3>
+                      <span className="text-[10px] font-bold text-text-secondary/40 uppercase tracking-[0.2em]">Net Promoter Score</span>
+                    </div>
+                  </div>
+                
+                  {/* Segmented Control Toggle */}
+                  <div className="bg-muted/30 p-1.5 rounded-xl border border-border/5 flex items-center gap-1">
+                    <button 
+                      onClick={() => setActiveViewTopNPS('detalle')}
+                      className={cn(
+                        "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                        activeViewTopNPS === 'detalle' ? "bg-white text-primary shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
+                      )}
+                    >
+                      Detalle
+                    </button>
+                    <button 
+                      onClick={() => setActiveViewTopNPS('tendencia')}
+                      className={cn(
+                        "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                        activeViewTopNPS === 'tendencia' ? "bg-white text-primary shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
+                      )}
+                    >
+                      Tendencia
+                    </button>
+                  </div>
+                </div>
+             </CardHeader>
+
+             <CardContent className="flex-1 px-8 pb-6">
+                <div className="h-full flex flex-col justify-center relative">
+                  {activeViewTopNPS === 'detalle' ? (
+                    <div className="animate-in fade-in slide-in-from-left-2 duration-500 h-full flex flex-col justify-center">
+                      <ResponseStackedBarGroup 
+                        items={npsDistributionItems}
+                        showLegend={false}
+                        showPercentages
+                        size="md"
+                        compact
+                        className="space-y-8"
+                      />
+                    </div>
+                  ) : (
+                    <div className="animate-in fade-in slide-in-from-right-2 duration-500 h-full flex flex-col justify-center">
+                      <TrendMetricLineChart 
+                        series={npsTrendSeries}
+                        height={280}
+                        showLegend={false}
+                        showComparison={false}
+                        standalone
+                      />
+                    </div>
+                  )}
+                </div>
+             </CardContent>
+
+             <div className="mt-auto bg-muted/5 border-t border-border/10 px-8 py-6">
+               <MetricComparisonFooter 
+                 items={npsFooterItems}
+                 columns={3}
+                 className="border-none p-0 bg-transparent"
+               />
+             </div>
+           </Card>
+        </div>
+      )}
+
+        {/* 3. Functional Content Area */}
+        <div className="px-4 sm:px-8 py-8 min-h-0">
+          <Tabs defaultValue="favorabilidad" className="w-full">
+            <div className="flex items-center justify-between border-b border-border/40 mb-8 overflow-x-auto scrollbar-hide">
+              <TabsList className="bg-transparent h-auto p-0 gap-10">
+                <TabsTrigger 
+                  value="favorabilidad" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[11px] font-black uppercase tracking-wider px-1 pb-4 h-full gap-2 transition-all opacity-40 data-[state=active]:opacity-100"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Favorabilidad
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="participacion" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[11px] font-black uppercase tracking-wider px-1 pb-4 h-full gap-2 transition-all opacity-40 data-[state=active]:opacity-100"
+                >
+                  <Users className="h-4 w-4" />
+                  Participación
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="nps" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[11px] font-black uppercase tracking-wider px-1 pb-4 h-full gap-2 transition-all opacity-40 data-[state=active]:opacity-100"
+                >
+                  <Star className="h-4 w-4" />
+                  NPS
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="dimensiones" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-[11px] font-black uppercase tracking-wider px-1 pb-4 h-full gap-2 transition-all opacity-40 data-[state=active]:opacity-100"
+                >
+                  <Layers className="h-4 w-4" />
+                  Dimensiones
+                </TabsTrigger>
+                <TabsTrigger value="preguntas" disabled className="rounded-none border-b-2 border-transparent text-[11px] font-black uppercase tracking-wider px-1 pb-4 h-full gap-2 opacity-20">
+                  <HelpCircle className="h-4 w-4" />
+                  Preguntas
+                </TabsTrigger>
+                <TabsTrigger value="comentarios" disabled className="rounded-none border-b-2 border-transparent text-[11px] font-black uppercase tracking-wider px-1 pb-4 h-full gap-2 opacity-20">
+                  <MessageSquare className="h-4 w-4" />
+                  Comentarios
+                </TabsTrigger>
+                <TabsTrigger value="insights" disabled className="rounded-none border-b-2 border-transparent text-[11px] font-black uppercase tracking-wider px-1 pb-4 h-full gap-2 opacity-20">
+                  <Sparkles className="h-4 w-4" />
+                  Insights IA
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="favorabilidad" className="mt-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="flex flex-col gap-8 pb-12 px-1">
+                <Card className="border border-border/40 bg-surface shadow-xl shadow-black/[0.02] rounded-[40px] overflow-hidden min-h-[600px]">
+                  <CardHeader className="px-10 pt-10 pb-6 border-b border-border/40 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div className="flex flex-col gap-1">
+                        <h2 className="text-xl font-black text-text-primary tracking-tight uppercase">Análisis de Favorabilidad</h2>
+                        <p className="text-xs text-text-muted font-bold uppercase tracking-wider opacity-60">Percepción de clima y cultura organizacional</p>
+                      </div>
+                      
+                       <div className="flex items-center p-1 bg-surface-subtle rounded-xl border border-border/20">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setActiveFilterTab('favorabilidad');
+                            setIsFiltersDrawerOpen(true);
+                          }}
+                          className={cn(
+                            "h-9 px-6 gap-2.5 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all shadow-sm",
+                            getActiveFiltersCount('favorabilidad').total > 0 
+                              ? "bg-brand text-white shadow-brand/20" 
+                              : "bg-white border-border/10 text-text-secondary hover:bg-surface-muted"
+                          )}
+                        >
+                          <Filter className="h-3.5 w-3.5" />
+                          <span>Demográficos</span>
+                          {getActiveFiltersCount('favorabilidad').total > 0 && (
+                            <span className="flex items-center justify-center bg-white text-brand text-[10px] font-black h-5 min-w-[20px] px-1 rounded-full ml-1">
+                              {getActiveFiltersCount('favorabilidad').total}
+                            </span>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="p-0">
+                    <div className="grid grid-cols-1 xl:grid-cols-2">
+                      {/* Distribution Panel */}
+                      <div className="p-10 border-b xl:border-b-0 xl:border-r border-border/40 flex flex-col gap-8 group hover:bg-muted/5 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-black text-text-secondary/30 uppercase tracking-[0.2em]">Desglose de Respuestas</span>
+                            <h4 className="text-lg font-black text-text-primary uppercase tracking-tight">Distribución por Periodo</h4>
+                          </div>
+                          
+                          <div className="h-10 w-10 rounded-xl bg-muted/30 flex items-center justify-center text-text-secondary/40">
+                            <Layers className="h-5 w-5" />
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1 min-h-[400px] flex flex-col justify-center bg-muted/5 rounded-[2rem] p-8 border border-border/5">
+                          <ResponseStackedBarGroup 
+                            items={distributionItems}
+                            showLegend
+                            showPercentages
+                            size="md"
+                            className="space-y-8"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Trend Panel */}
+                      <div className="p-10 flex flex-col gap-8 group hover:bg-muted/5 transition-colors min-h-[600px]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-black text-text-secondary/30 uppercase tracking-[0.2em]">Evolución Temporal</span>
+                            <h4 className="text-lg font-black text-text-primary uppercase tracking-tight">Tendencia de Favorabilidad</h4>
+                          </div>
+                          <div className="h-10 w-10 rounded-xl bg-muted/30 flex items-center justify-center text-text-secondary/40">
+                            <TrendingUp className="h-5 w-5" />
+                          </div>
+                         </div>
+                         
+                         <div className="flex-1 min-h-[400px]">
+                           <TrendMetricLineChart 
+                             series={favTrendSeries}
+                             height={400}
+                             showLegend={false}
+                             showComparison={false}
+                           />
+                         </div>
+                       </div>
+                    </div>
+
+                    {/* Variation Summary Basement */}
+                    <div className="border-t border-border/40 bg-muted/5 relative overflow-hidden">
+                      <div className="px-10 py-6 flex items-center justify-between">
+                         <div className="flex items-center gap-3">
+                           <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                           <span className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em]">Variaciones contra Referencia Base</span>
+                         </div>
+                       </div>
+                      
+                      <div className="px-10 pb-10">
+                        <MetricComparisonFooter 
+                          items={favFooterItems}
+                          columns={5}
+                          className="border-none p-0 bg-transparent"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="participacion" className="mt-0 outline-none">
+              <div className="flex flex-col gap-8 pb-12 px-1">
+                <Card className="border border-border/40 bg-surface shadow-xl shadow-black/[0.02] rounded-[40px] overflow-hidden min-h-[600px]">
+                  <CardHeader className="px-10 pt-10 pb-6 border-b border-border/40 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div className="flex flex-col gap-1">
+                        <h2 className="text-xl font-black text-text-primary tracking-tight uppercase">Métricas de Participación</h2>
+                        <p className="text-xs text-text-muted font-bold uppercase tracking-wider opacity-60">Nivel de compromiso y respuesta por periodo</p>
+                      </div>
+
+                       <div className="flex items-center p-1 bg-surface-subtle rounded-xl border border-border/20">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setActiveFilterTab('participacion');
+                            setIsFiltersDrawerOpen(true);
+                          }}
+                          className={cn(
+                            "h-9 px-6 gap-2.5 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all shadow-sm",
+                            getActiveFiltersCount('participacion').total > 0 
+                              ? "bg-brand text-white shadow-brand/20" 
+                              : "bg-white border-border/10 text-text-secondary hover:bg-surface-muted"
+                          )}
+                        >
+                          <Filter className="h-3.5 w-3.5" />
+                          <span>Demográficos</span>
+                          {getActiveFiltersCount('participacion').total > 0 && (
+                            <span className="flex items-center justify-center bg-white text-brand text-[10px] font-black h-5 min-w-[20px] px-1 rounded-full ml-1">
+                              {getActiveFiltersCount('participacion').total}
+                            </span>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="p-0">
+                    <div className="grid grid-cols-1 xl:grid-cols-2">
+                      {/* Distribution Panel */}
+                      <div className="p-10 border-b xl:border-b-0 xl:border-r border-border/40 flex flex-col gap-8 group hover:bg-muted/5 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-black text-text-secondary/30 uppercase tracking-[0.2em]">Métricas de Cobertura</span>
+                            <h4 className="text-lg font-black text-text-primary uppercase tracking-tight">Participación por Periodo</h4>
+                          </div>
+                          
+                          <div className="h-10 w-10 rounded-xl bg-muted/30 flex items-center justify-center text-text-secondary/40">
+                            <Users className="h-5 w-5" />
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1 min-h-[400px] flex flex-col justify-center bg-muted/5 rounded-[2rem] p-8 border border-border/5">
+                          <ResponseStackedBarGroup 
+                            items={partDistributionItems}
+                            showLegend
+                            showPercentages
+                            size="md"
+                            className="space-y-8"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Trend Panel */}
+                      <div className="p-10 flex flex-col gap-8 group hover:bg-muted/5 transition-colors min-h-[600px]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-black text-text-secondary/30 uppercase tracking-[0.2em]">Evolución Temporal</span>
+                            <h4 className="text-lg font-black text-text-primary uppercase tracking-tight">Tendencia de Respuesta</h4>
+                          </div>
+                          <div className="h-10 w-10 rounded-xl bg-muted/30 flex items-center justify-center text-text-secondary/40">
+                            <TrendingUp className="h-5 w-5" />
+                          </div>
+                         </div>
+                         
+                         <div className="flex-1 min-h-[400px]">
+                           <TrendMetricLineChart 
+                             series={partTrendSeries}
+                             height={400}
+                             showLegend={false}
+                             showComparison={false}
+                           />
+                         </div>
+                       </div>
+                    </div>
+
+                    {/* Variation Summary Basement */}
+                    <div className="border-t border-border/40 bg-muted/5 relative overflow-hidden">
+                      <div className="px-10 py-6 flex items-center justify-between">
+                         <div className="flex items-center gap-3">
+                           <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
+                           <span className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em]">Variación contra Referente Sectorial</span>
+                         </div>
+                       </div>
+                      
+                      <div className="px-10 pb-10">
+                        <MetricComparisonFooter 
+                          items={partFooterItems}
+                          columns={5}
+                          className="border-none p-0 bg-transparent"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="nps" className="mt-0 outline-none">
+              <div className="flex flex-col gap-8 pb-12 px-1">
+                <Card className="border border-border/40 bg-surface shadow-xl shadow-black/[0.02] rounded-[40px] overflow-hidden min-h-[600px]">
+                  <CardHeader className="px-10 pt-10 pb-6 border-b border-border/40 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div className="flex flex-col gap-1">
+                        <h2 className="text-xl font-black text-text-primary tracking-tight uppercase">Net Promoter Score (NPS)</h2>
+                        <p className="text-xs text-text-muted font-bold uppercase tracking-wider opacity-60">Lealtad y recomendación de los colaboradores</p>
+                      </div>
+
+                       <div className="flex items-center p-1 bg-surface-subtle rounded-xl border border-border/20">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setActiveFilterTab('nps');
+                            setIsFiltersDrawerOpen(true);
+                          }}
+                          className={cn(
+                            "h-9 px-6 gap-2.5 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all shadow-sm",
+                            getActiveFiltersCount('nps').total > 0 
+                              ? "bg-brand text-white shadow-brand/20" 
+                              : "bg-white border-border/10 text-text-secondary hover:bg-surface-muted"
+                          )}
+                        >
+                          <Filter className="h-3.5 w-3.5" />
+                          <span>Demográficos</span>
+                          {getActiveFiltersCount('nps').total > 0 && (
+                            <span className="flex items-center justify-center bg-white text-brand text-[10px] font-black h-5 min-w-[20px] px-1 rounded-full ml-1">
+                              {getActiveFiltersCount('nps').total}
+                            </span>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="p-0">
+                    <div className="grid grid-cols-1 xl:grid-cols-2">
+                      {/* Distribution Panel */}
+                      <div className="p-10 border-b xl:border-b-0 xl:border-r border-border/40 flex flex-col gap-8 group hover:bg-muted/5 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col gap-1">
+                           <span className="text-[10px] font-black text-text-secondary/30 uppercase tracking-[0.2em]">Distribución NPS por Periodo</span>
+                            <h4 className="text-lg font-black text-text-primary uppercase tracking-tight">Análisis NPS por Periodo</h4>
+                          </div>
+                          
+                          <div className="h-10 w-10 rounded-xl bg-muted/30 flex items-center justify-center text-text-secondary/40">
+                            <Target className="h-5 w-5" />
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1 min-h-[400px] flex flex-col justify-center bg-muted/5 rounded-[2rem] p-8 border border-border/5">
+                          <ResponseStackedBarGroup 
+                            items={npsDistributionItems}
+                            showLegend
+                            showPercentages
+                            size="md"
+                            className="space-y-8"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Trend Panel */}
+                      <div className="p-10 flex flex-col gap-8 group hover:bg-muted/5 transition-colors min-h-[600px]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-black text-text-secondary/30 uppercase tracking-[0.2em]">Tendencia de Lealtad</span>
+                            <h4 className="text-lg font-black text-text-primary uppercase tracking-tight">Evolución del NPS</h4>
+                          </div>
+                          <div className="h-10 w-10 rounded-xl bg-muted/30 flex items-center justify-center text-text-secondary/40">
+                            <TrendingUp className="h-5 w-5" />
+                          </div>
+                         </div>
+                         
+                         <div className="flex-1 h-[400px]">
+                           <TrendMetricLineChart 
+                             series={npsTrendSeries}
+                             height={400}
+                             showLegend={false}
+                             showComparison={false}
+                           />
+                         </div>
+                       </div>
+                    </div>
+
+                    {/* Variation Summary Basement */}
+                    <div className="border-t border-border/40 bg-muted/5 relative overflow-hidden">
+                      <div className="px-10 py-6 flex items-center justify-between">
+                         <div className="flex items-center gap-3">
+                           <div className="h-2 w-2 rounded-full bg-warning animate-pulse" />
+                           <span className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em]">Resumen de Lealtad vs Referente</span>
+                         </div>
+                       </div>
+                      
+                      <div className="px-10 pb-10">
+                        <MetricComparisonFooter 
+                          items={npsFooterItems}
+                          columns={5}
+                          className="border-none p-0 bg-transparent"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="dimensiones" className="mt-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="flex flex-col gap-8 pb-12 px-1">
+                <Card className="border border-border/40 bg-surface shadow-xl shadow-black/[0.02] rounded-[40px] overflow-hidden min-h-[600px]">
+                  <CardHeader className="px-10 pt-10 pb-6 border-b border-border/40 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center p-1 bg-surface-subtle rounded-xl border border-border/20">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => setDimensionsView('table')}
+                              className={cn("h-9 rounded-lg font-black text-xs gap-2 px-4 border transition-all", dimensionsView === 'table' ? "bg-white shadow-sm text-brand border-border/10" : "text-text-muted border-transparent hover:bg-white/50")}
+                            >
+                              <TableIcon className="h-3.5 w-3.5" />
+                              Tabla
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => setDimensionsView('heatmap')}
+                              className={cn("h-9 rounded-lg font-black text-xs gap-2 px-4 border transition-all", dimensionsView === 'heatmap' ? "bg-white shadow-sm text-brand border-border/10" : "text-text-muted border-transparent hover:bg-white/50")}
+                            >
+                              <LayoutGrid className="h-3.5 w-3.5" />
+                              Heatmap
+                            </Button>
+                          </div>
+                          
+                          </div>
+                          
+                          <div className="flex items-center gap-3">
+                            {/* Filtro por Dimensión */}
+                            <div className="flex items-center p-1 bg-surface-subtle rounded-xl border border-border/20">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-9 px-4 gap-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all bg-white border-border/10 text-text-secondary hover:bg-surface-muted"
+                                  >
+                                    <Layers className="h-3.5 w-3.5" />
+                                    <span>Dimensión ({selectedDimensions.length})</span>
+                                    <ChevronDown className="h-3 w-3 opacity-40" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-64 bg-surface border border-border/40 shadow-drawer rounded-lg p-2 max-h-[400px] overflow-y-auto">
+                                  <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-text-muted px-2 py-1.5">Seleccionar Dimensiones</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <div className="flex flex-col gap-1 p-1">
+                                    <DropdownMenuItem onClick={selectAllDimensions} className="text-[10px] font-black uppercase tracking-widest p-2 rounded-md focus:bg-brand/5 focus:text-brand cursor-pointer">
+                                      Seleccionar todas
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={deselectAllDimensions} className="text-[10px] font-black uppercase tracking-widest p-2 rounded-md focus:bg-brand/5 focus:text-brand cursor-pointer">
+                                      Limpiar selección
+                                    </DropdownMenuItem>
+                                  </div>
+                                  <DropdownMenuSeparator />
+                                  <div className="space-y-1 mt-1">
+                                    {COMPARATIVE_DIMENSIONS_DATA.map(dim => (
+                                      <DropdownMenuCheckboxItem 
+                                        key={dim.id}
+                                        checked={selectedDimensions.includes(dim.name)}
+                                        onCheckedChange={() => toggleDimension(dim.name)}
+                                        className="text-[10px] font-black uppercase tracking-widest p-2 rounded-md focus:bg-brand/5 focus:text-brand cursor-pointer"
+                                      >
+                                        {dim.name}
+                                      </DropdownMenuCheckboxItem>
+                                    ))}
+                                  </div>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+
+                            {/* Filtro por Orden */}
+                            <div className="flex items-center p-1 bg-surface-subtle rounded-xl border border-border/20">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-9 px-4 gap-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all bg-white border-border/10 text-text-secondary hover:bg-surface-muted"
+                                  >
+                                    <ArrowUpDown className="h-3.5 w-3.5" />
+                                    <span>Orden: {sortLabels[sortCriteria]}</span>
+                                    <ChevronDown className="h-3 w-3 opacity-40" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56 bg-surface border border-border/40 shadow-drawer rounded-lg p-2">
+                                  <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-text-muted px-2 py-1.5">Ordenar por</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuRadioGroup value={sortCriteria} onValueChange={setSortCriteria}>
+                                    <DropdownMenuRadioItem value="mejora" className="text-[10px] font-black uppercase tracking-widest p-3 rounded-md focus:bg-brand/5 focus:text-brand cursor-pointer">
+                                      Mayor mejora
+                                    </DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="caida" className="text-[10px] font-black uppercase tracking-widest p-3 rounded-md focus:bg-brand/5 focus:text-brand cursor-pointer">
+                                      Mayor caída
+                                    </DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="alto" className="text-[10px] font-black uppercase tracking-widest p-3 rounded-md focus:bg-brand/5 focus:text-brand cursor-pointer">
+                                      Puntaje más alto
+                                    </DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="respuestas" className="text-[10px] font-black uppercase tracking-widest p-3 rounded-md focus:bg-brand/5 focus:text-brand cursor-pointer">
+                                      Más respuestas
+                                    </DropdownMenuRadioItem>
+                                  </DropdownMenuRadioGroup>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+
+                             {/* Heatmap specific controls */}
+                             {dimensionsView === 'heatmap' && (
+                               <>
+                                 <div className="flex items-center p-1 bg-surface-subtle rounded-xl border border-border/20">
+                                   <DropdownMenu>
+                                     <DropdownMenuTrigger asChild>
+                                       <Button 
+                                         variant="ghost" 
+                                         size="sm" 
+                                         className={cn(
+                                           "h-9 px-6 gap-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all shadow-sm",
+                                           heatmapSegment !== 'Área' 
+                                             ? "bg-brand text-white shadow-md shadow-brand/20" 
+                                             : "bg-white border-border/10 text-text-secondary hover:bg-surface-muted"
+                                         )}
+                                       >
+                                         <SlidersHorizontal className="h-3.5 w-3.5" />
+                                         <span>Ver por: {heatmapSegment}</span>
+                                       </Button>
+                                     </DropdownMenuTrigger>
+                                     <DropdownMenuContent align="end" className="w-52 bg-surface border border-border/40 shadow-drawer rounded-lg p-2">
+                                        <DropdownMenuRadioGroup value={heatmapSegment} onValueChange={setHeatmapSegment}>
+                                           {[
+                                             'Área', 'Líder', 'Rol', 'Ciudad', 'País', 'Edad', 'Sexo', 'Antigüedad', 'Tipo de Contrato'
+                                           ].map(v => (
+                                             <DropdownMenuRadioItem key={v} value={v} className="text-[11px] font-bold uppercase tracking-wider p-3 rounded-md focus:bg-brand/5 focus:text-brand cursor-pointer">
+                                               {v}
+                                             </DropdownMenuRadioItem>
+                                           ))}
+                                        </DropdownMenuRadioGroup>
+                                     </DropdownMenuContent>
+                                   </DropdownMenu>
+                                 </div>
+
+                                 <div className="flex items-center p-1 bg-surface-subtle rounded-xl border border-border/20">
+                                   <Button 
+                                     variant="ghost" 
+                                     size="sm"
+                                     onClick={() => {
+                                       setActiveFilterTab('dimensionesHeatmap');
+                                       setIsFiltersDrawerOpen(true);
+                                     }}
+                                     className={cn(
+                                       "h-9 px-4 gap-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                                       getActiveFiltersCount('dimensionesHeatmap').total > 0 
+                                         ? "bg-brand text-white shadow-md shadow-brand/20" 
+                                         : "bg-white border-border/10 text-text-secondary hover:bg-surface-muted"
+                                     )}
+                                   >
+                                     <Filter className="h-3.5 w-3.5" />
+                                     <span>Segmentación</span>
+                                     {getActiveFiltersCount('dimensionesHeatmap').total > 0 && (
+                                       <span className="flex items-center justify-center bg-white text-brand text-[10px] font-black h-5 min-w-[20px] px-1 rounded-full ml-1">
+                                         {getActiveFiltersCount('dimensionesHeatmap').total}
+                                       </span>
+                                     )}
+                                   </Button>
+                                 </div>
+                               </>
+                             )}
+
+                             {/* Table specific controls */}
+                             {dimensionsView === 'table' && (
+                               <div className="flex items-center p-1 bg-surface-subtle rounded-xl border border-border/20">
+                                 <Button 
+                                   variant="ghost" 
+                                   size="sm"
+                                   onClick={() => {
+                                     setActiveFilterTab('dimensionesTable');
+                                     setIsFiltersDrawerOpen(true);
+                                   }}
+                                   className={cn(
+                                     "h-9 px-4 gap-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                                     getActiveFiltersCount('dimensionesTable').total > 0 
+                                       ? "bg-brand text-white shadow-md shadow-brand/20" 
+                                       : "bg-white border-border/10 text-text-secondary hover:bg-surface-muted"
+                                   )}
+                                 >
+                                   <Filter className="h-3.5 w-3.5" />
+                                   <span>Demográficos</span>
+                                   {getActiveFiltersCount('dimensionesTable').total > 0 && (
+                                     <span className="flex items-center justify-center bg-white text-brand text-[10px] font-black h-5 min-w-[20px] px-1 rounded-full ml-1">
+                                       {getActiveFiltersCount('dimensionesTable').total}
+                                     </span>
+                                   )}
+                                 </Button>
+                               </div>
+                             )}
+                          </div>
+                        </div>
+                      </div>
+                  </CardHeader>
+                  
+                   <CardContent className="px-8 pb-8">
+                     {dimensionsView === 'table' ? (
+                       <Table>
+                         <TableHeader className="[&_tr]:border-b-0">
+                           <TableRow className="hover:bg-transparent border-b border-border/40">
+                             <TableHead className="h-14 text-[11px] font-black text-text-muted uppercase tracking-wider pl-0 w-[30%]">Dimensión</TableHead>
+                             <TableHead className="h-14 text-center text-[11px] font-black text-brand uppercase tracking-wider w-[12%]">Q4 2025 (Base)</TableHead>
+                             <TableHead className="h-14 text-center text-[11px] font-black text-text-muted uppercase tracking-wider w-[12%]">Q3 2025</TableHead>
+                             <TableHead className="h-14 text-center text-[11px] font-black text-text-muted uppercase tracking-wider w-[12%]">Q2 2025</TableHead>
+                             <TableHead className="h-14 text-center text-[11px] font-black text-text-muted uppercase tracking-wider w-[12%]">Q1 2025</TableHead>
+                             <TableHead className="h-14 text-center text-[11px] font-black text-text-muted uppercase tracking-wider w-[12%]">Q4 2024</TableHead>
+                             <TableHead className="h-14 text-right text-[11px] font-black text-text-muted uppercase tracking-wider pr-0 w-[10%]">Variación vs Q3</TableHead>
+                           </TableRow>
+                         </TableHeader>
+                         <TableBody>
+                           {filteredAndSortedDimensions.length > 0 ? (
+                             filteredAndSortedDimensions.map((dim) => (
+                               <TableRow key={dim.id} className="group hover:bg-surface-muted/30 transition-colors border-b border-border/20">
+                                 <TableCell className="py-6 pl-0">
+                                   <div className="flex flex-col gap-0.5">
+                                     <span className="text-sm font-black text-text-primary tracking-tight group-hover:text-brand transition-colors">{dim.name}</span>
+                                     <span className="text-[11px] font-medium text-text-muted truncate max-w-[280px]">{dim.description}</span>
+                                   </div>
+                                 </TableCell>
+                                 <TableCell className="text-center">
+                                   <span className="text-[15px] font-black text-brand">{dim.currentScore}%</span>
+                                 </TableCell>
+                                 <TableCell className="text-center">
+                                   <span className="text-[13px] font-bold text-text-secondary/80">{dim.q3_2025}%</span>
+                                 </TableCell>
+                                 <TableCell className="text-center">
+                                   <span className="text-[13px] font-bold text-text-secondary/80">{dim.q2_2025 || 0}%</span>
+                                 </TableCell>
+                                 <TableCell className="text-center">
+                                   <span className="text-[13px] font-bold text-text-secondary/80">{dim.q1_2025}%</span>
+                                 </TableCell>
+                                 <TableCell className="text-center">
+                                   <span className="text-[13px] font-bold text-text-secondary/80">{dim.q4_2024 || 0}%</span>
+                                 </TableCell>
+                                 <TableCell className="text-right pr-0">
+                                   <DeltaPill 
+                                     value={dim.delta} 
+                                     tone={dim.trend === 'up' ? 'positive' : 'negative'} 
+                                     size="sm" 
+                                   />
+                                 </TableCell>
+                               </TableRow>
+                             ))
+                           ) : (
+                             <TableRow>
+                               <TableCell colSpan={7} className="h-32 text-center text-text-secondary/40 font-medium">
+                                 No hay dimensiones que coincidan con la selección
+                               </TableCell>
+                             </TableRow>
+                           )}
+                         </TableBody>
+                       </Table>
+                     ) : (
+                       <div className="space-y-6">
+                         {/* Heatmap Legend */}
+                         <div className="flex items-center gap-4 py-4 border-y border-border/20 flex-wrap">
+                           <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary/60 mr-4">Leyenda:</span>
+                           <div className="flex items-center gap-2">
+                             <div className={cn("w-6 h-6 rounded-md border border-border/20", "heatmap-negative-strong")} />
+                             <span className="text-[10px] font-bold text-text-secondary">&lt; -5pp</span>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <div className={cn("w-6 h-6 rounded-md border border-border/20", "heatmap-negative-light")} />
+                             <span className="text-[10px] font-bold text-text-secondary">-4 a -1pp</span>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <div className={cn("w-6 h-6 rounded-md border border-border/20", "heatmap-neutral")} />
+                             <span className="text-[10px] font-bold text-text-secondary">0pp</span>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <div className={cn("w-6 h-6 rounded-md border border-border/20", "heatmap-positive-light")} />
+                             <span className="text-[10px] font-bold text-text-secondary">+1 a +4pp</span>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <div className={cn("w-6 h-6 rounded-md border border-border/20", "heatmap-positive-strong")} />
+                             <span className="text-[10px] font-bold text-text-secondary">&gt; +5pp</span>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <div className="w-6 h-6 rounded-md bg-muted/30 border border-border/20 flex items-center justify-center">
+                               <span className="text-[8px] font-black text-text-muted">P</span>
+                             </div>
+                             <span className="text-[10px] font-bold text-text-secondary">Privado</span>
+                           </div>
+                         </div>
+
+                         {/* Heatmap Matrix */}
+                         <div className="overflow-x-auto">
+                           <table className="w-full border-collapse">
+                             <thead>
+                               <tr className="border-b border-border/40">
+                                 <th className="h-14 text-left text-[11px] font-black text-text-muted uppercase tracking-wider pl-0 min-w-[150px]">Dimensión</th>
+                                 {heatmapData.segments.map((seg) => (
+                                   <th key={seg.id} className="h-14 text-center text-[11px] font-black text-text-muted uppercase tracking-wider min-w-[100px]">{seg.label}</th>
+                                 ))}
+                               </tr>
+                             </thead>
+                             <tbody>
+                               {filteredAndSortedDimensions.map((dimBase) => {
+                                 const dim = heatmapData.data.find(d => d.name === dimBase.name);
+                                 if (!dim) return null;
+                                 return (
+                                 <tr key={dim.id} className="border-b border-border/20 hover:bg-surface-muted/30 transition-colors">
+                                   <td className="py-4 pl-0">
+                                     <span className="text-sm font-black text-text-primary">{dim.name}</span>
+                                   </td>
+                                   {heatmapData.segments.map((seg) => {
+                                     const cell = dim.segments[seg.id];
+                                     if (!cell) return <td key={seg.id} className="p-2 text-center"><span className="text-xs text-text-muted">-</span></td>;
+                                     
+                                     if (cell.status === 'private') {
+                                       return (
+                                         <td key={seg.id} className="p-2 text-center">
+                                           <div className="w-full h-12 rounded-lg bg-muted/30 border border-border/20 flex items-center justify-center">
+                                             <span className="text-[10px] font-black text-text-muted">Privado</span>
+                                           </div>
+                                         </td>
+                                       );
+                                     }
+                                     
+                                     return (
+                                       <td key={seg.id} className="p-2 text-center">
+                                         <div className={cn(
+                                           "w-full h-12 rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all hover:scale-105",
+                                           getHeatmapTone(cell.delta, cell.status)
+                                         )}>
+                                           <span className="text-sm font-black">{formatDelta(cell.delta)}</span>
+                                           <span className="text-[10px] font-medium opacity-60">n={cell.n}</span>
+                                         </div>
+                                       </td>
+                                     );
+                                   })}
+                                 </tr>
+                               );
+                               })}
+                             </tbody>
+                           </table>
+                         </div>
+                       </div>
+                     )}
+                   </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="preguntas" />
+            <TabsContent value="comentarios" />
+            <TabsContent value="insights" />
+          </Tabs>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default ComparativeDashboard;

@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "name": "comparativo-encuestas",
+  "buildCommand": "cd ubits-prototype-playground && npm install && npm run build",
+  "outputDirectory": "ubits-prototype-playground/dist",
+  "framework": "vite"
+}

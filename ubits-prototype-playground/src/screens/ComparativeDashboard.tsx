@@ -641,6 +641,15 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         // Apply factor to currentScore and p1-p4
         const adjust = (val: number) => Math.max(0, Math.min(100, val - factor));
 
+        // Detect when filtered question has no responses
+        const qNameHash = q.question.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+        const filterHash = Object.entries(tabFilters.preguntas.demographics || {})
+          .filter(([_, values]) => values && values.length > 0)
+          .map(([key, values]) => values.join('+')).join('-')
+          .split('').reduce((a, c) => a + c.charCodeAt(0), 0) || 0;
+        const noResponsesChance = (qNameHash + filterHash) % 100;
+        const hasNoResponses = type === 'Cultura' && filterCount > 0 && noResponsesChance > 70; // 30% chance
+
         return {
           ...q,
           currentScore: adjust(q.currentScore),
@@ -648,8 +657,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
           p2: adjust(q.p2),
           p3: adjust(q.p3),
           p4: adjust(q.p4),
-          delta: Number((adjust(q.currentScore) - adjust(q.p1)).toFixed(1)),
-          responses: Math.floor(q.responses * (0.7 + (factor % 3) / 10))
+          delta: hasNoResponses ? null : Number((adjust(q.currentScore) - adjust(q.p1)).toFixed(1)),
+          responses: hasNoResponses ? 0 : Math.floor(q.responses * (0.7 + (factor % 3) / 10)),
+          noResponses: hasNoResponses
         };
       });
     }
@@ -690,6 +700,15 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       result = result.map(s => {
         const factor = (filterCount * 3) % 10;
 
+        // Detect when filtered comment has no responses
+        const sNameHash = s.dimension.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+        const filterHash = Object.entries(tabFilters.comentarios.demographics || {})
+          .filter(([_, values]) => values && values.length > 0)
+          .map(([key, values]) => values.join('+')).join('-')
+          .split('').reduce((a, c) => a + c.charCodeAt(0), 0) || 0;
+        const noResponsesChance = (sNameHash + filterHash) % 100;
+        const hasNoResponses = type === 'Cultura' && filterCount > 0 && noResponsesChance > 70; // 30% chance
+
         // Helper to shift nested data
         const shiftData = (data: any) => {
           if (!data) return data;
@@ -700,7 +719,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
             positive: newPos,
             negative: newNeg,
             neutral: 100 - (newPos + newNeg),
-            total: Math.floor(data.total * (0.8 + (factor % 2) / 10))
+            total: hasNoResponses ? 0 : Math.floor(data.total * (0.8 + (factor % 2) / 10))
           };
         };
 
@@ -713,7 +732,8 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
           p2: shiftData(s.p2),
           p3: shiftData(s.p3),
           p4: shiftData(s.p4),
-          delta: Number((shifted_current.positive - shifted_p1.positive).toFixed(1))
+          delta: hasNoResponses ? null : Number((shifted_current.positive - shifted_p1.positive).toFixed(1)),
+          noResponses: hasNoResponses
         };
       });
     } else {
@@ -851,15 +871,33 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
           let delta = (hash % 31) - 15; // -15 to +15
           let n = 20 + (hash % 200);
 
+          // Detect when filtered segment has no responses (e.g., leader filter)
+          const restrictedLiderValues = [
+            ...(currentDemographics.lider || []),
+            ...currentSegments.filter(s => s.variable === 'Líder').flatMap(s => s.values)
+          ];
+          const hasLeaderFilter = restrictedLiderValues.length > 0;
+          const noResponsesChance = (dimBase.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0) +
+            seg.label.split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % 100;
+          const hasNoResponses = type === 'Cultura' && hasLeaderFilter && noResponsesChance > 65; // 35% chance when leader filter applied
+
           if (totalFilters > 0 || hasHeatmapFilters) {
             const shiftFactor = (totalFilters + activeHeatmapFilters.length) * 3;
             delta = delta + (hash % 11) - 5 + (shiftFactor % 7);
           }
 
+          let cellStatus = 'active';
+          if (hasNoResponses) {
+            cellStatus = 'no_responses';
+            n = 0;
+          } else if (type === 'Cultura' && hash % 10 === 0) {
+            cellStatus = 'private';
+          }
+
           segmentsData[seg.id] = {
             delta,
             n,
-            status: (type === 'Cultura' && hash % 10 === 0) ? 'private' : 'active'
+            status: cellStatus
           };
         });
       }
@@ -3175,6 +3213,27 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                         );
                                       }
 
+                                      if (cell.status === 'no_responses') {
+                                        return (
+                                          <td key={seg.id} className="p-2 text-center">
+                                            <TooltipProvider delayDuration={0}>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="text-[10px] font-bold text-text-secondary/50 uppercase tracking-wider cursor-help bg-muted/30 px-1.5 py-0.5 rounded border border-border/10 transition-colors hover:bg-muted/50">
+                                                    Sin Respuestas
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-surface border border-border/40 shadow-premium p-3 rounded-xl max-w-[220px]">
+                                                  <p className="text-xs font-semibold leading-relaxed text-text-secondary">
+                                                    Este segmento no tiene respuestas por los filtros que estás aplicando.
+                                                  </p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          </td>
+                                        );
+                                      }
+
                                       if (cell.status === 'private') {
                                         return (
                                           <td key={seg.id} className="p-2 text-center">
@@ -3409,11 +3468,28 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                   const rawBaseScore = baseCol ? (item as any)[baseCol.quesKey] : (item as any).q4_2024;
                                   const baseScore = rawBaseScore !== null && rawBaseScore !== undefined ? rawBaseScore : null;
 
+                                  const hasNoResponses = type === 'Cultura' && (item as any).noResponses === true;
+
                                   return (
                                     <TableCell key={col.id} className="text-center">
                                       <div className="flex flex-col items-center gap-1.5">
                                         <div className="flex items-center gap-2">
-                                          {(type === 'Cultura' && (item.id + col.id).length % 14 === 0 && (item as any)[col.quesKey] !== undefined) ? (
+                                          {hasNoResponses ? (
+                                            <TooltipProvider delayDuration={0}>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="text-[10px] font-bold text-text-secondary/50 uppercase tracking-wider cursor-help bg-muted/30 px-1.5 py-0.5 rounded border border-border/10 transition-colors hover:bg-muted/50">
+                                                    Sin Respuestas
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-surface border border-border/40 shadow-premium p-3 rounded-xl max-w-[220px]">
+                                                  <p className="text-xs font-semibold leading-relaxed text-text-secondary">
+                                                    Esta pregunta no tiene respuestas por los filtros que estás aplicando.
+                                                  </p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          ) : (type === 'Cultura' && (item.id + col.id).length % 14 === 0 && (item as any)[col.quesKey] !== undefined) ? (
                                             <TooltipProvider delayDuration={0}>
                                               <Tooltip>
                                                 <TooltipTrigger asChild>
@@ -3668,11 +3744,28 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                   const rawBaseData = baseCol ? (item as any)[baseCol.sentKey] : null;
                                   const baseData = rawBaseData && typeof rawBaseData === 'object' ? rawBaseData : null;
 
+                                  const hasNoResponses = type === 'Cultura' && (item as any).noResponses === true;
+
                                   return (
                                     <TableCell key={col.id} className="text-center">
                                       <div className="flex flex-col items-center gap-1.5">
                                         <div className="flex items-center gap-2">
-                                          {(type === 'Cultura' && (item.id + col.id).length % 16 === 0 && (item as any)[col.sentKey] !== undefined) ? (
+                                          {hasNoResponses ? (
+                                            <TooltipProvider delayDuration={0}>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="text-[10px] font-bold text-text-secondary/50 uppercase tracking-wider cursor-help bg-muted/30 px-1.5 py-0.5 rounded border border-border/10 transition-colors hover:bg-muted/50">
+                                                    Sin Respuestas
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-surface border border-border/40 shadow-premium p-3 rounded-xl max-w-[220px]">
+                                                  <p className="text-xs font-semibold leading-relaxed text-text-secondary">
+                                                    Esta dimensión no tiene comentarios por los filtros que estás aplicando.
+                                                  </p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          ) : (type === 'Cultura' && (item.id + col.id).length % 16 === 0 && (item as any)[col.sentKey] !== undefined) ? (
                                             <TooltipProvider delayDuration={0}>
                                               <Tooltip>
                                                 <TooltipTrigger asChild>

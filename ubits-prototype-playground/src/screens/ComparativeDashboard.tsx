@@ -963,6 +963,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       // For demonstration, we'll make the second survey (index 1) have no responses
       if (cloned.distributionByPeriod && cloned.distributionByPeriod.length > 1) {
         const targetIdx = 1; // Simulation: second survey has no data for this specific filter
+        console.log('[DEBUG applyFilters-Cultura] Marking survey as no_responses. targetIdx:', targetIdx, 'filterCount:', filterCount);
         cloned.distributionByPeriod[targetIdx] = {
           ...cloned.distributionByPeriod[targetIdx],
           status: 'no_responses',
@@ -974,6 +975,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
             percentage: 0 
           }))
         };
+        console.log('[DEBUG applyFilters-Cultura] Updated distributionByPeriod after no_responses:', cloned.distributionByPeriod[targetIdx]);
       }
       
       // Also adjust trendData to show a gap/null
@@ -993,6 +995,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   const getProcessedMetricData = React.useCallback((tabId: TabId, mockData: any, isNPS: boolean = false) => {
     const filterCount = getActiveFiltersCount(tabId).total;
     const rawData = applyFilters(mockData, filterCount, isNPS);
+    console.log('[DEBUG getProcessedMetricData] tabId:', tabId, 'filterCount:', filterCount, 'rawData.distributionByPeriod:', rawData?.distributionByPeriod);
 
     if (rawData?.distributionByPeriod) {
       // Build distribution based on selected columns
@@ -1003,7 +1006,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
           (item.period.includes('BASE') && col.isBase)
         ) || rawData.distributionByPeriod[index % rawData.distributionByPeriod.length];
 
-        return {
+        const newItem = {
           ...mockItem,
           surveyId: col.id, // Explicitly pass surveyId from column
           period: col.label,
@@ -1011,6 +1014,8 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
           isBase: col.isBase,
           status: mockItem?.status // Preserve no_responses status
         };
+        console.log('[DEBUG newDistribution] col:', col.label, 'mockItem.status:', mockItem?.status, 'newItem.status:', newItem.status);
+        return newItem;
       });
       
       rawData.distributionByPeriod = newDistribution;
@@ -1191,16 +1196,21 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     const dist = resumenFavData?.distributionByPeriod || [];
     const baseItem = dist.find(item => item.isBase);
     const baseVal = baseItem?.segments.find((s: any) => s.tone === 'positive')?.percentage || 0;
+    console.log('[DEBUG resumenDistributionItems] dist:', dist);
+    console.log('[DEBUG resumenDistributionItems] baseVal:', baseVal);
 
     return dist.map((item, index) => {
       const currentVal = item.segments.find((s: any) => s.tone === 'positive')?.percentage || 0;
-      const delta = item.isBase ? undefined : Number((currentVal - baseVal).toFixed(1));
+      const hasNoResponses = item.status === 'no_responses';
+      const delta = item.isBase ? undefined : (hasNoResponses ? undefined : Number((currentVal - baseVal).toFixed(1)));
+      console.log('[DEBUG resumenDistributionItems] item[', index, ']:', { period: item.period, status: item.status, hasNoResponses, currentVal, delta, total: item.total });
       return {
         id: `fav-res-period-${index}`,
         label: item.period,
-        value: formatPercentage(currentVal),
+        value: hasNoResponses ? 'sin respuestas' : formatPercentage(currentVal),
         total: item.total,
         delta: delta,
+        deltaLabel: hasNoResponses ? 'sin respuestas' : undefined,
         deltaTone: delta === undefined ? undefined : (delta > 0 ? 'positive' as const : delta < 0 ? 'negative' as const : 'neutral' as const),
         isBase: item.isBase,
         segments: (item.segments || []).map(s => ({ ...s, percentage: formatPercentage(s.percentage), tone: s.tone as any }))
@@ -1236,13 +1246,16 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     const baseVal = baseItem?.segments.find((s: any) => s.tone === 'positive')?.percentage || 0;
     return dist.map((item, index) => {
       const currentVal = item.segments.find((s: any) => s.tone === 'positive')?.percentage || 0;
-      const delta = item.isBase ? undefined : Number((currentVal - baseVal).toFixed(1));
+      const hasNoResponses = item.status === 'no_responses';
+      const delta = item.isBase ? undefined : (hasNoResponses ? undefined : Number((currentVal - baseVal).toFixed(1)));
+      console.log('[DEBUG resumenPartDistributionItems] item[', index, ']:', { period: item.period, status: item.status, hasNoResponses, currentVal, delta, total: item.total });
       return {
         id: `part-res-period-${index}`,
         label: item.period,
-        value: formatPercentage(currentVal),
+        value: hasNoResponses ? 'sin respuestas' : formatPercentage(currentVal),
         total: item.total,
         delta,
+        deltaLabel: hasNoResponses ? 'sin respuestas' : undefined,
         deltaTone: delta === undefined ? undefined : (delta > 0 ? 'positive' as const : delta < 0 ? 'negative' as const : 'neutral' as const),
         isBase: item.isBase,
         segments: (item.segments || []).map(s => ({ ...s, percentage: formatPercentage(s.percentage), tone: s.tone as any }))
@@ -1331,13 +1344,16 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     const baseVal = baseItem?.segments.find((s: any) => s.tone === 'positive')?.percentage || 0;
     return dist.map((item, index) => {
       const currentVal = item.segments.find((s: any) => s.tone === 'positive')?.percentage || 0;
-      const delta = item.isBase ? undefined : Number((currentVal - baseVal).toFixed(1));
+      const hasNoResponses = item.status === 'no_responses';
+      const delta = item.isBase ? undefined : (hasNoResponses ? undefined : Number((currentVal - baseVal).toFixed(1)));
+      console.log('[DEBUG distributionItems-favorabilidad] item[', index, ']:', { period: item.period, status: item.status, hasNoResponses, currentVal, delta });
       return {
         id: `fav-period-${index}`,
         label: item.period,
-        value: formatPercentage(currentVal),
+        value: hasNoResponses ? 'sin respuestas' : formatPercentage(currentVal),
         total: item.total,
         delta,
+        deltaLabel: hasNoResponses ? 'sin respuestas' : undefined,
         deltaTone: delta === undefined ? undefined : (delta > 0 ? 'positive' as const : delta < 0 ? 'negative' as const : 'neutral' as const),
         isBase: item.isBase,
         segments: (item.segments || []).map(s => ({ ...s, percentage: formatPercentage(s.percentage), tone: s.tone as any }))
@@ -1373,13 +1389,16 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     const baseVal = baseItem?.segments.find((s: any) => s.tone === 'positive')?.percentage || 0;
     return dist.map((item, index) => {
       const currentVal = item.segments.find((s: any) => s.tone === 'positive')?.percentage || 0;
-      const delta = item.isBase ? undefined : Number((currentVal - baseVal).toFixed(1));
+      const hasNoResponses = item.status === 'no_responses';
+      const delta = item.isBase ? undefined : (hasNoResponses ? undefined : Number((currentVal - baseVal).toFixed(1)));
+      console.log('[DEBUG partDistributionItems-participacion] item[', index, ']:', { period: item.period, status: item.status, hasNoResponses, currentVal, delta });
       return {
         id: `part-period-${index}`,
         label: item.period,
-        value: formatPercentage(currentVal),
+        value: hasNoResponses ? 'sin respuestas' : formatPercentage(currentVal),
         total: item.total,
         delta,
+        deltaLabel: hasNoResponses ? 'sin respuestas' : undefined,
         deltaTone: delta === undefined ? undefined : (delta > 0 ? 'positive' as const : delta < 0 ? 'negative' as const : 'neutral' as const),
         isBase: item.isBase,
         segments: (item.segments || []).map(s => ({ ...s, percentage: formatPercentage(s.percentage), tone: s.tone as any }))

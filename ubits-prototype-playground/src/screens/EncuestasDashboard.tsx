@@ -45,7 +45,9 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { Plus, FileText, Layout } from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -330,10 +332,36 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
  <span>Comparar encuestas</span>
  </Button>
  
- <Button className="h-10 px-5 gap-2.5 text-xs font-semibold rounded-xl shadow-lg active:scale-95">
- <span>Crear encuesta</span>
- <ChevronDown className="h-4 w-4 opacity-50" />
- </Button>
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button className="h-10 px-5 gap-2.5 text-xs font-semibold rounded-xl shadow-lg active:scale-95 group">
+        <span>Crear encuesta</span>
+        <ChevronDown className="h-4 w-4 opacity-50 group-data-[state=open]:rotate-180 transition-transform duration-200" />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl border-border/40 shadow-xl bg-surface/95 backdrop-blur-sm animate-in fade-in-0 zoom-in-95">
+      <DropdownMenuLabel className="px-2 py-1.5 text-[10px] font-bold text-text-secondary/40 uppercase tracking-widest">Opciones de creación</DropdownMenuLabel>
+      <DropdownMenuSeparator className="bg-border/40 my-1.5" />
+      <DropdownMenuItem className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer focus:bg-primary/5 focus:text-primary transition-all group">
+        <div className="h-8 w-8 rounded-lg bg-surface-muted flex items-center justify-center group-focus:bg-primary/10 transition-colors">
+          <Plus className="h-4 w-4 text-text-secondary group-focus:text-primary" />
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[13px] font-bold tracking-tight">Crear en blanco</span>
+          <span className="text-[10px] text-text-secondary/50 font-medium">Empieza desde cero</span>
+        </div>
+      </DropdownMenuItem>
+      <DropdownMenuItem className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer focus:bg-primary/5 focus:text-primary transition-all group">
+        <div className="h-8 w-8 rounded-lg bg-surface-muted flex items-center justify-center group-focus:bg-primary/10 transition-colors">
+          <Layout className="h-4 w-4 text-text-secondary group-focus:text-primary" />
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[13px] font-bold tracking-tight">Crear con plantilla</span>
+          <span className="text-[10px] text-text-secondary/50 font-medium">Usa un diseño predefinido</span>
+        </div>
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
  </div>
  </div>
 

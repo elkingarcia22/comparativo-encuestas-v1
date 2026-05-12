@@ -70,35 +70,31 @@ La implementación en `/src/` es el referente técnico:
 - **Compartir (🔗)**: Tooltip: *"Copiar enlace del comparativo con filtros actuales."* -> Toast: *"Enlace copiado al portapapeles."*
 - **Descargar (📥)**: Tooltip: *"Exportar resultados a Excel o PDF."* -> Toast: *"La descarga del reporte ha iniciado."*
 
-## 9. Historias de Usuario Candidatas
-- **HU1 (Base)**: "Como usuario, quiero marcar una encuesta como base para que el sistema calcule automáticamente los deltas contra ella."
-- **HU2 (Filtros)**: "Como usuario, quiero filtrar por 'País' para ver si la cultura organizacional varía geográficamente."
-
-## 10. Criterios de Aceptación
+## 9. Criterios de Aceptación
 - Bloqueo de navegación si no se seleccionan al menos 2 encuestas.
 - Ocultación dinámica de Cards (NPS en Cultura, Favorabilidad en NPS).
 - Activación inmediata del candado de privacidad al cambiar filtros.
 
-## 11. Insumos Técnicos para Desarrollo
+## 10. Insumos Técnicos para Desarrollo
 - **Iconografía**: 🌱 (Clima), ❤️ (Cultura), ⏱️ (NPS).
 - **Manejo de Errores**:
   - Toast Error: *"Ocurrió un error al procesar la solicitud. Por favor, intenta de nuevo."*
   - Error Carga: *"Error de conexión. No pudimos recuperar la información."*
 
-## 12. Edge Cases
+## 11. Edge Cases
 - **Dimensiones Inconsistentes**: Manejo de "N/A" sin romper el layout.
 - **Comentarios Escasos**: IA dirá: *"Se requieren más comentarios para el análisis."*
 
-## 13. Analítica
+## 12. Analítica
 - Eventos: `compare_start`, `filter_apply`, `report_download`, `share_link_copy`.
 
-## 14. QA Checklist
+## 13. QA Checklist
 - [x] ¿El candado aparece según el umbral dinámico?
 - [x] ¿Los deltas son correctos respecto a la Base?
 - [x] ¿Todos los hovers muestran el texto especificado en la Sección 7?
 
-## 15. Riesgos y Decisiones
+## 14. Riesgos y Decisiones
 - **Decisión**: Se priorizó la encuesta Base como ancla fija para evitar confusión en el cálculo de deltas transversales.
 
-## 16. Aprobaciones
+## 15. Aprobaciones
 - [ ] Product Manager | [ ] Tech Lead | [ ] QA Lead

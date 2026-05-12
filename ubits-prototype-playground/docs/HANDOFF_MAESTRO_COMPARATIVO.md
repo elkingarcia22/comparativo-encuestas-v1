@@ -1,6 +1,6 @@
 # Plantilla Maestra de Handoff: Comparativo de Encuestas UBITS
 
-Este documento es el activo definitivo de entrega (Handoff) que integra la visión de Diseño, Producto y Desarrollo.
+Este documento es el activo definitivo de entrega (Handoff) que integra la visión de Diseño, Producto y Desarrollo. Es la evolución final del manual técnico y funcional.
 
 ---
 
@@ -8,81 +8,97 @@ Este documento es el activo definitivo de entrega (Handoff) que integra la visi�
 El **Comparativo de Encuestas** es una herramienta analítica avanzada que permite a los administradores de Talento Humano contrastar resultados de múltiples procesos de medición (2 a 5 encuestas) en una sola interfaz. Automatiza el cálculo de variaciones (deltas) y proporciona insights generados por IA.
 
 ## 2. Contexto Funcional
-Actualmente, los administradores deben descargar múltiples Excels para comparar resultados. Este módulo centraliza esa labor, permitiendo ver la evolución de la Favorabilidad, Participación y NPS a través del tiempo o entre diferentes unidades de negocio.
+Facilita la toma de decisiones basada en datos históricos. Elimina la necesidad de cruces manuales en Excel, permitiendo ver la evolución de métricas críticas (Favorabilidad, Participación, NPS) y el detalle por dimensiones/preguntas entre diferentes momentos del tiempo o campañas.
 
 ## 3. Alcance / No Alcance
 - **Alcance**:
-  - Comparación de encuestas del mismo tipo (Clima con Clima, etc.).
-  - Selección de una encuesta "Base" como ancla.
-  - Filtrado demográfico dinámico (Líder, Área, Rol, etc.).
-  - Análisis de comentarios con IA y descarga de reportes.
+  - Encuestas de tipo **Clima, Cultura y NPS**.
+  - Comparación de 2 a 5 encuestas del mismo tipo.
+  - Selección de una encuesta "Base" como ancla de comparación.
+  - Filtrado demográfico completo (Líder, Área, Rol, Ciudad, País, etc.).
 - **No Alcance**:
-  - Comparar encuestas de tipos distintos (ej. Clima vs NPS).
-  - Comparar más de 5 encuestas simultáneamente.
+  - Comparación de tipos mixtos (ej. Clima vs Cultura).
+  - Selección de más de 5 encuestas (por densidad de información en UI).
 
 ## 4. Flujo End-to-End
-1. **Configuración**: El usuario entra al Wizard, elige el tipo de encuesta y selecciona entre 2 y 5 procesos. Define la "Base".
-2. **Visualización**: Se genera el Dashboard Comparativo con KPIs agregados.
-3. **Exploración**: El usuario aplica filtros (ej: filtrar por un Líder específico).
-4. **Profundización**: Clic en dimensiones para abrir el Drawer de Comentarios e IA.
-5. **Salida**: El usuario descarga el reporte o comparte el enlace filtrado.
+1. **Configuración (Wizard)**:
+   - **Paso 1**: Elegir Tipo de Encuesta.
+   - **Paso 2**: Seleccionar encuestas del listado (mín. 2, máx. 5).
+   - **Paso 3**: Definir cuál es la **Base** (Tooltip: *"Punto de referencia para calcular mejoras o caídas"*).
+2. **Dashboard**: Visualización de Cards de KPI y Tabla de Dimensiones.
+3. **Filtros**: Aplicación de filtros demográficos que actualizan todo el sistema.
+4. **Análisis**: Apertura de Drawer para ver comentarios e insights de IA.
+5. **Reportes**: Exportación a Excel/PDF o copia de enlace compartido.
 
 ## 5. Prototipo Funcional como Fuente de Verdad
-La implementación actual en la carpeta `/src/` del repositorio sirve como especificación técnica viva.
-- **Pantalla de Inicio**: `EncuestasDashboard.tsx` (Wizard).
-- **Dashboard Principal**: `ComparativeDashboard.tsx`.
-- **Componentes**: `DeltaPill`, `Heatmap`, `AILoader`.
+La implementación en `/src/` es el referente técnico:
+- **`EncuestasDashboard.tsx`**: Lógica de entrada y wizard.
+- **`ComparativeDashboard.tsx`**: Núcleo del dashboard y filtros.
+- **`comparativeMocks.ts`**: Estructura de datos y contratos de API simulados.
 
-## 6. Reglas de Negocio
+## 6. Reglas de Negocio (Core Logic)
 - **Cálculo de Delta**: $\Delta = \text{Valor Encuesta X} - \text{Valor Base}$.
-- **Umbral de Privacidad**: El umbral de anonimato es **configurable por el usuario** (3, 5, 10, etc.). Si $n < \text{Umbral}$, el dato se protege con un icono de candado 🔒.
-- **Consistencia de Tipo**: Solo se habilitan encuestas del mismo tipo para selección múltiple.
+  - *Interpretación*: Positivo = Mejora (Verde). Negativo = Retroceso (Rojo).
+- **Privacy Wall (Configurable)**: 
+  - Regla: Si $n < \text{Umbral}$ (ej: 3, 5, 10), se muestra el candado 🔒.
+  - Tooltip: *"Datos protegidos por umbral de anonimato (Umbral: X)."*
+- **Estado Sin Datos ($n=0$)**: Se muestra el texto **"Sin respuestas"** o guion "—".
 
-## 7. Comportamiento UI por Componente (Tooltips y Toasts)
-- **Delta Pill**:
-  - Hover Verde: *"Mejora significativa respecto a la encuesta base."*
-  - Hover Rojo: *"Retroceso respecto a la encuesta base."*
-- **KPI Cards**: Hover (i) explica la metodología de cálculo (Favorabilidad, Participación, NPS).
-- **Toasts**:
-  - Éxito Compartir: *"Enlace copiado al portapapeles."*
-  - Éxito Descarga: *"La descarga del reporte ha iniciado."*
-  - Error: *"Ocurrió un error al procesar la solicitud. Por favor, intenta de nuevo."*
+## 7. Comportamiento UI por Componente
+### Matriz de Estados y Tooltips
+| Componente | Escenario | Visualización | Tooltip (Hover) |
+| :--- | :--- | :--- | :--- |
+| **Cards KPI** | $n=0$ | "Sin respuestas" | "No hay datos para los filtros seleccionados." |
+| **Delta Pill** | Mejora | Píldora Verde | "Mejora significativa respecto a la encuesta base." |
+| **Delta Pill** | Caída | Píldora Roja | "Retroceso respecto a la encuesta base." |
+| **Heatmap** | Sin respuestas | Celda Gris | "Puntaje promedio del segmento [X] en la dimensión [Y]." |
+| **N/A en Tablas** | Faltante | "N/A" | "Esta dimensión no fue evaluada en esta encuesta específica." |
 
-## 8. Rutas de Usuario
-- **Ruta Feliz**: Wizard > Selección exitosa > Visualización de Dashboard.
-- **Ruta de Datos Vacíos (Escenario Juan Pérez)**: Aplicar filtro restrictivo > Ver estados "Sin respuestas" con tooltip: *"No se encontraron registros para este segmento en este proceso."*
+## 8. Rutas de Usuario Detalladas
+### RUTA 1: Filtros (Escenario "Juan Pérez")
+- El usuario selecciona un líder en el Header.
+- **Hover en Header (i)**: *"Los filtros aplicados afectan a todos los componentes del dashboard."*
+- Si el líder no tiene respuestas: Tooltip: *"No se encontraron registros para este segmento en este proceso."*
+
+### RUTA 2: Análisis IA y Comentarios
+- **Tooltip Icono IA**: *"Análisis generado automáticamente por inteligencia artificial."*
+- **Hovers de Sentimiento**:
+  - Positivo: *"Comentarios que expresan satisfacción."*
+  - Negativo: *"Comentarios con áreas de mejora o descontento."*
+
+### RUTA 3: Acciones de Header
+- **Compartir (🔗)**: Tooltip: *"Copiar enlace del comparativo con filtros actuales."* -> Toast: *"Enlace copiado al portapapeles."*
+- **Descargar (📥)**: Tooltip: *"Exportar resultados a Excel o PDF."* -> Toast: *"La descarga del reporte ha iniciado."*
 
 ## 9. Historias de Usuario Candidatas
-- **HU1**: "Como Admin, quiero elegir una encuesta base para que todos los cálculos de mejora o retroceso se realicen contra ella."
-- **HU2**: "Como Admin, quiero filtrar por Área para comparar el desempeño de diferentes departamentos en el tiempo."
+- **HU1 (Base)**: "Como usuario, quiero marcar una encuesta como base para que el sistema calcule automáticamente los deltas contra ella."
+- **HU2 (Filtros)**: "Como usuario, quiero filtrar por 'País' para ver si la cultura organizacional varía geográficamente."
 
 ## 10. Criterios de Aceptación
-- El sistema debe impedir la selección de menos de 2 o más de 5 encuestas.
-- El cálculo del delta debe ser exacto hasta el primer decimal.
-- Los iconos de candado deben activarse inmediatamente si los filtros bajan el volumen de datos por debajo del umbral.
+- Bloqueo de navegación si no se seleccionan al menos 2 encuestas.
+- Ocultación dinámica de Cards (NPS en Cultura, Favorabilidad en NPS).
+- Activación inmediata del candado de privacidad al cambiar filtros.
 
 ## 11. Insumos Técnicos para Desarrollo
-- **Stack**: React, TypeScript, Lucide Icons.
-- **Endpoints Requeridos**: GetSurveyResults, GetComparativeData, PostGenerateReport.
-- **Variables de Estado**: `selectedSurveys`, `baseSurveyId`, `activeFilters`.
+- **Iconografía**: 🌱 (Clima), ❤️ (Cultura), ⏱️ (NPS).
+- **Manejo de Errores**:
+  - Toast Error: *"Ocurrió un error al procesar la solicitud. Por favor, intenta de nuevo."*
+  - Error Carga: *"Error de conexión. No pudimos recuperar la información."*
 
-## 12. Edge Cases y Errores
-- **Inconsistencia de Datos**: Si una encuesta no tiene una dimensión que la Base sí tiene, mostrar **"N/A"** con hover: *"Esta dimensión no fue evaluada en esta encuesta específica."*
-- **Fallo de Red**: Toast: *"Error de conexión. No pudimos recuperar la información del comparativo."*
+## 12. Edge Cases
+- **Dimensiones Inconsistentes**: Manejo de "N/A" sin romper el layout.
+- **Comentarios Escasos**: IA dirá: *"Se requieren más comentarios para el análisis."*
 
 ## 13. Analítica
-- Tracking de clics en "Compartir", descargas de PDF/Excel y uso de filtros demográficos.
+- Eventos: `compare_start`, `filter_apply`, `report_download`, `share_link_copy`.
 
 ## 14. QA Checklist
-- [ ] ¿El icono de candado respeta el umbral dinámico configurado?
-- [ ] ¿Se ocultan los cards de NPS en encuestas de tipo Cultura?
-- [ ] ¿El tooltip de "Sin respuestas" aparece en el hover de estados vacíos?
+- [x] ¿El candado aparece según el umbral dinámico?
+- [x] ¿Los deltas son correctos respecto a la Base?
+- [x] ¿Todos los hovers muestran el texto especificado en la Sección 7?
 
-## 15. Riesgos y Decisiones Abiertas
-- **Riesgo**: Tiempo de respuesta de IA con altos volúmenes de datos.
-- **Decisión**: Uso de `AILoader` para feedback visual inmediato.
+## 15. Riesgos y Decisiones
+- **Decisión**: Se priorizó la encuesta Base como ancla fija para evitar confusión en el cálculo de deltas transversales.
 
-## 16. Aprobaciones Finales
-- [ ] Product Manager
-- [ ] Tech Lead
-- [ ] QA Lead
+## 16. Aprobaciones
+- [ ] Product Manager | [ ] Tech Lead | [ ] QA Lead

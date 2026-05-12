@@ -993,7 +993,10 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
   // Helper to process metric data for a specific tab
   const getProcessedMetricData = React.useCallback((tabId: TabId, mockData: any, isNPS: boolean = false) => {
-    const filterCount = getActiveFiltersCount(tabId).total;
+    // For Cultura, use filters from resumen (global) for all tabs, not per-tab filters
+    const effectiveTabId = type === 'Cultura' ? 'resumen' : tabId;
+    const filterCount = getActiveFiltersCount(effectiveTabId).total;
+    console.log('[DEBUG getProcessedMetricData] tabId:', tabId, 'effectiveTabId:', effectiveTabId, 'filterCount:', filterCount);
     const rawData = applyFilters(mockData, filterCount, isNPS);
     console.log('[DEBUG getProcessedMetricData] tabId:', tabId, 'filterCount:', filterCount, 'rawData.distributionByPeriod:', rawData?.distributionByPeriod);
 

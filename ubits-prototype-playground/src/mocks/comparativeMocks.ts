@@ -31,12 +31,6 @@ export const COMPARATIVE_SURVEYS_LIST: SurveyListItem[] = [
   { id: "n2025-4", name: "NPS Clientes Premium Q4 2025", type: "NPS", status: "Finalizado", statusVariant: "positive", startDate: "01 nov 2025", endDate: "15 nov 2025", participants: "920", progress: 100 },
   { id: "n2", name: "NPS Clientes Premium Q4 2024", type: "NPS", status: "Finalizado", statusVariant: "positive", startDate: "01 nov 2024", endDate: "15 nov 2024", participants: "820", progress: 100 },
   { id: "n3", name: "NPS Clientes Premium Q3 2024", type: "NPS", status: "Finalizado", statusVariant: "positive", startDate: "01 ago 2024", endDate: "15 ago 2024", participants: "780", progress: 100 },
-  
-  // IA (Added 2025/2026)
-  { id: "ia2026-1", name: "Adopción de IA Gen - Q1 2026", type: "Evaluación y adopción de IA", status: "Finalizado", statusVariant: "positive", startDate: "20 mar 2026", endDate: "05 abr 2026", participants: "450", progress: 100 },
-  { id: "ia2025-4", name: "Adopción de IA Gen - Q4 2025", type: "Evaluación y adopción de IA", status: "Finalizado", statusVariant: "positive", startDate: "20 dic 2025", endDate: "05 ene 2026", participants: "420", progress: 100 },
-  { id: "ia1", name: "Adopción de IA Gen - Q1 2024", type: "Evaluación y adopción de IA", status: "Finalizado", statusVariant: "positive", startDate: "20 mar 2024", endDate: "05 abr 2024", participants: "310", progress: 100 },
-  { id: "ia3", name: "Madurez Digital 2024", type: "Evaluación y adopción de IA", status: "Finalizado", statusVariant: "positive", startDate: "15 sep 2024", endDate: "30 sep 2024", participants: "320", progress: 100 },
 ];
 
 

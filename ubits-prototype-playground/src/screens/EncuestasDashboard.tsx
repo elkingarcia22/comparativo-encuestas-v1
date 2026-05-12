@@ -14,12 +14,14 @@ import {
  Calendar,
  Check,
  Info,
- Sun,
- Globe,
- Cpu,
- Heart,
- Lock,
- ArrowUpDown,
+  Sun,
+  Globe,
+  Cpu,
+  Heart,
+  Sprout,
+  Gauge,
+  Lock,
+  ArrowUpDown,
   X,
 } from "lucide-react";
 import { EmptyState } from "@/components/feedback/EmptyState";
@@ -239,12 +241,11 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
  const surveys = COMPARATIVE_SURVEYS_LIST;
 
 
- const surveyTypes = [
- { title: "Clima", description: "Mide la percepción del ambiente laboral y bienestar.", icon: Sun },
- { title: "Cultura", description: "Analiza valores y comportamientos compartidos.", icon: Globe },
- { title: "NPS", description: "Net Promoter Score: Mide la lealtad externa.", icon: Heart },
- { title: "Evaluación y adopción de IA", description: "Mide la madurez tecnológica frente a la IA.", icon: Cpu }
- ];
+  const surveyTypes = [
+    { title: "Clima", description: "Mide la percepción del ambiente laboral y bienestar.", icon: Sprout },
+    { title: "Cultura", description: "Analiza valores y comportamientos compartidos.", icon: Heart },
+    { title: "NPS", description: "Net Promoter Score: Mide la lealtad externa.", icon: Gauge },
+  ];
 
  // Logic
  const filteredSurveys = React.useMemo(() => {

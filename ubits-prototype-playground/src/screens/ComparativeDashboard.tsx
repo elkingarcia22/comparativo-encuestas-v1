@@ -74,9 +74,17 @@ import {
   COMPARATIVE_NPS_DATA,
   COMPARATIVE_DIMENSIONS_DATA,
   COMPARATIVE_QUESTIONS_DATA,
+  CULTURA_DIMENSIONS_DATA,
+  CULTURA_QUESTIONS_DATA,
+  CULTURA_FAVORABILITY_DATA,
+  CULTURA_PARTICIPATION_DATA,
+  CULTURA_NPS_DATA,
+  CULTURA_SENTIMENT_DATA,
   COMPARATIVE_SENTIMENT_DATA,
   COMPARATIVE_COMMENTS_DETAIL,
   COMPARATIVE_AI_INSIGHTS,
+  CULTURA_COMMENTS_DETAIL,
+  CULTURA_AI_INSIGHTS,
   DEMOGRAPHIC_OPTIONS,
   SEGMENT_CATEGORIES
 } from "@/mocks/comparativeMocks";
@@ -215,7 +223,10 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   const [showTopCards, setShowTopCards] = React.useState(true);
 
   // Dimensions Tab State
-  const [selectedDimensions, setSelectedDimensions] = React.useState<string[]>(COMPARATIVE_DIMENSIONS_DATA.map(d => d.name));
+  const [selectedDimensions, setSelectedDimensions] = React.useState<string[]>(() => {
+    const data = type === 'Cultura' ? CULTURA_DIMENSIONS_DATA : COMPARATIVE_DIMENSIONS_DATA;
+    return data.map(d => d.name);
+  });
   const [sortCriteria, setSortCriteria] = React.useState<string>("mejora");
 
   const sortLabels: Record<string, string> = {
@@ -226,6 +237,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   };
   const [activeTab, setActiveTab] = React.useState<string>('dimensiones');
   const [dimensionsView, setDimensionsView] = React.useState<'table' | 'heatmap'>('table');
+  const [selectedDimensionDetail, setSelectedDimensionDetail] = React.useState<string | null>(null);
+  const [isCommentDetailOpen, setIsCommentDetailOpen] = React.useState(false);
+  const [drawerSentimentTab, setDrawerSentimentTab] = React.useState('detalle');
   const [heatmapSegment, setHeatmapSegment] = React.useState<string>('Área');
 
   // Export Dialog State
@@ -239,138 +253,164 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   const [shareLink, setShareLink] = React.useState('');
 
   // questions Tab State
-  const [selectedQuestionDimensions, setSelectedQuestionDimensions] = React.useState<string[]>(Array.from(new Set(COMPARATIVE_QUESTIONS_DATA.map(q => q.dimension))));
-  
-  const selectAllQuestionDimensions = () => setSelectedQuestionDimensions(COMPARATIVE_DIMENSIONS_DATA.map(d => d.name));
-  const deselectAllQuestionDimensions = () => setSelectedQuestionDimensions([]);
+  // Questions Tab State
+  const [selectedQuestionDimensions, setSelectedQuestionDimensions] = React.useState<string[]>(() => {
+    const data = type === 'Cultura' ? CULTURA_DIMENSIONS_DATA : COMPARATIVE_DIMENSIONS_DATA;
+    return data.map(d => d.name);
+  });
   const [sortQuestionsCriteria, setSortQuestionsCriteria] = React.useState<string>("mejora");
 
-  // --- Dynamic Columns Logic ---
-  const allSurveys = COMPARATIVE_SURVEYS_LIST;
-  const baseSurvey = React.useMemo(() => allSurveys.find(s => s.id === baseId) || allSurveys[0], [baseId, allSurveys]);
-  const comparisonSurveys = React.useMemo(() => (comparativeIds || []).filter(id => id !== baseId).map(id => allSurveys.find(s => s.id === id)).filter(Boolean) as typeof allSurveys, [comparativeIds, baseId, allSurveys]);
-
-  // Helper to map survey to mock keys
-  // Get the display label for a survey (what the user sees)
-  const getDisplayLabel = (s: typeof allSurveys[0]) => {
-    const name = s.name.toUpperCase();
-
-    // Extract Year/Quarter for display
-    if (name.includes('2026')) {
-      if (name.includes('Q1')) return 'Q1 2026';
-      if (name.includes('Q2')) return 'Q2 2026';
-      if (name.includes('Q3')) return 'Q3 2026';
-      if (name.includes('Q4')) return 'Q4 2026';
-      return 'Q1 2026';
-    }
-    if (name.includes('2025')) {
-      if (name.includes('Q1')) return 'Q1 2025';
-      if (name.includes('Q2')) return 'Q2 2025';
-      if (name.includes('Q3')) return 'Q3 2025';
-      if (name.includes('Q4')) return 'Q4 2025';
-      return 'Q1 2025';
-    }
-    if (name.includes('2024')) {
-      if (name.includes('Q1')) return 'Q1 2024';
-      if (name.includes('Q2')) return 'Q2 2024';
-      if (name.includes('Q3')) return 'Q3 2024';
-      if (name.includes('Q4')) return 'Q4 2024';
-      return 'Q4 2024';
-    }
-    return 'Q4 2023';
-  };
-
-  const getMockKeys = (s: typeof allSurveys[0]) => {
-    const name = s.name.toUpperCase();
-    const id = s.id;
-
-    // Direct ID mapping
-    const idMap: Record<string, string> = {
-      'c2': 'currentScore', 'c3': 'q3_2024', 'c4': 'q2_2024', 'c5': 'q1_2024',
-      'n2': 'currentScore', 'n3': 'q3_2024',
-      'cu1': 'currentScore', 'cu4': 'q3_2024'
+  // Sentiment Tab State
+  // Sentiment Tab State
+  const [selectedSentimentDimensions, setSelectedSentimentDimensions] = React.useState<string[]>(() => {
+    const data = type === 'Cultura' ? CULTURA_DIMENSIONS_DATA : COMPARATIVE_DIMENSIONS_DATA;
+    return data.map(d => d.name);
+  });
+  const [sortSentimentCriteria, setSortSentimentCriteria] = React.useState<string>("mejora");
+  
+  // --- Helper for Chronological Sorting ---
+  const getSurveyScore = React.useCallback((item: any) => {
+    if (!item) return 0;
+    const yearMatch = item.name.match(/202\d/);
+    const year = yearMatch ? parseInt(yearMatch[0]) : 0;
+    const quarterMatch = item.name.match(/Q(\d)/);
+    const quarter = quarterMatch ? parseInt(quarterMatch[1]) : 0;
+    const monthMap: Record<string, number> = { 
+      'ene': 1, 'feb': 2, 'mar': 3, 'abr': 4, 'may': 5, 'jun': 6, 
+      'jul': 7, 'ago': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dic': 12 
     };
-    if (idMap[id]) return idMap[id];
+    const monthStr = item.startDate?.split(' ')[1]?.toLowerCase();
+    const month = monthMap[monthStr] || 0;
+    return year * 1000 + quarter * 100 + month;
+  }, []);
 
-    // Year/Quarter extraction - map chronologically to available periods
-    // 2026 surveys map to the latest period (q4_2024)
-    if (name.includes('2026')) return 'currentScore'; // Simulate 2026 as latest
+  // --- Dynamic Survey Selection Logic ---
+  const allSurveys = React.useMemo(() => {
+    return COMPARATIVE_SURVEYS_LIST
+      .filter(s => s.type === type)
+      .sort((a, b) => getSurveyScore(b) - getSurveyScore(a));
+  }, [type, getSurveyScore]);
 
-    // 2025 surveys map to different quarters to avoid duplicates
-    if (name.includes('2025')) {
-      if (name.includes('Q4')) return 'q3_2024';   // Q4 2025 → Q3 2024 data
-      if (name.includes('Q3')) return 'q2_2024';   // Q3 2025 → Q2 2024 data
-      if (name.includes('Q2')) return 'q1_2024';   // Q2 2025 → Q1 2024 data
-      return 'q4_2023';                            // Q1 2025 → Q4 2023 data
+  const baseSurvey = React.useMemo(() => {
+    if (baseId) {
+      return allSurveys.find(s => s.id === baseId) || allSurveys[0];
     }
-
-    // 2024 surveys map directly by quarter
-    if (name.includes('2024')) {
-      if (name.includes('Q4')) return 'currentScore';
-      if (name.includes('Q3')) return 'q3_2024';
-      if (name.includes('Q2')) return 'q2_2024';
-      if (name.includes('Q1')) return 'q1_2024';
-    }
-
-    return 'q4_2023';
-  };
-
-  // Helper to calculate trend value from dimensions
-  const calculateTrendValue = (key: string, dims: typeof COMPARATIVE_DIMENSIONS_DATA = COMPARATIVE_DIMENSIONS_DATA): number => {
-    if (!dims.length) return 0;
-    const values = dims.map(d => (d as any)[key] || 0).filter(v => v > 0);
-    return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0;
-  };
+    return allSurveys[0];
+  }, [baseId, allSurveys]);
+  
+  const comparisonSurveys = React.useMemo(() => {
+    const list = (comparativeIds || [])
+      .filter(id => id !== baseSurvey?.id)
+      .map(id => COMPARATIVE_SURVEYS_LIST.find(s => s.id === id))
+      .filter(Boolean) as typeof COMPARATIVE_SURVEYS_LIST;
+    return [...list].sort((a, b) => getSurveyScore(b) - getSurveyScore(a));
+  }, [comparativeIds, baseSurvey, getSurveyScore]);
 
   const columns = React.useMemo(() => {
     const cols = [];
-
-    // Base column
-    const baseKey = getMockKeys(baseSurvey);
-    const baseDisplayLabel = getDisplayLabel(baseSurvey);
+    if (!baseSurvey) return [];
     cols.push({
       id: baseSurvey.id,
       label: baseSurvey.name,
       shortLabel: baseSurvey.name.includes(' - ') ? baseSurvey.name.split(' - ').pop() : baseSurvey.name,
       isBase: true,
-      dataKey: baseDisplayLabel,
-      dimKey: baseKey as any,
-      quesKey: baseKey as any,
-      sentKey: baseKey as any,
+      dataKey: 'currentScore',
+      dimKey: 'currentScore',
+      quesKey: 'currentScore',
+      sentKey: 'currentScore',
       responses: parseInt(baseSurvey.participants || "450")
     });
-
-    // Comparative columns
-    comparisonSurveys.forEach((survey) => {
-      const dataKey = getMockKeys(survey);
-      const displayLabel = getDisplayLabel(survey);
-
+    comparisonSurveys.forEach((survey, index) => {
+      const key = `p${index + 1}`;
       cols.push({
         id: survey.id,
         label: survey.name,
         shortLabel: survey.name.includes(' - ') ? survey.name.split(' - ').pop() : survey.name,
         isBase: false,
-        dataKey: displayLabel,
-        dimKey: dataKey as any,
-        quesKey: dataKey as any,
-        sentKey: dataKey as any,
+        dataKey: key,
+        dimKey: key,
+        quesKey: key,
+        sentKey: key,
         responses: parseInt(survey.participants || "400")
       });
     });
-
     return cols;
   }, [baseSurvey, comparisonSurveys]);
 
   const baseColumn = React.useMemo(() => columns.find(c => c.isBase), [columns]);
 
-  // Comentarios Tab State
-  const [selectedSentimentDimensions, setSelectedSentimentDimensions] = React.useState<string[]>(COMPARATIVE_DIMENSIONS_DATA.map(d => d.name));
-  const selectAllSentimentDimensions = () => setSelectedSentimentDimensions(COMPARATIVE_DIMENSIONS_DATA.map(d => d.name));
-  const deselectAllSentimentDimensions = () => setSelectedSentimentDimensions([]);
-  const [sortSentimentCriteria, setSortSentimentCriteria] = React.useState<string>("mejora");
-  const [isCommentDetailOpen, setIsCommentDetailOpen] = React.useState(false);
-  const [drawerSentimentTab, setDrawerSentimentTab] = React.useState('detalle');
-  const [selectedDimensionDetail, setSelectedDimensionDetail] = React.useState<string | null>(null);
+  // --- Core Data Sources ---
+  const dimensionsData = React.useMemo(() => {
+    return type === 'Cultura' ? CULTURA_DIMENSIONS_DATA : COMPARATIVE_DIMENSIONS_DATA;
+  }, [type]);
+
+  const questionsData = React.useMemo(() => {
+    return type === 'Cultura' ? CULTURA_QUESTIONS_DATA : COMPARATIVE_QUESTIONS_DATA;
+  }, [type]);
+
+  const sentimentSource = React.useMemo(() => {
+    const raw = type === 'Cultura' ? CULTURA_SENTIMENT_DATA : COMPARATIVE_SENTIMENT_DATA;
+    return raw.map(item => {
+      const newItem: any = { ...item };
+      
+      columns.forEach((col, index) => {
+        if (type === 'Cultura') {
+          // Map Cultura keys based on column order (most recent first)
+          const keys = ['currentScore', 'p1', 'p2', 'p3', 'p4', 'p5'];
+          const targetKey = keys[index] || 'currentScore';
+          if ((item as any)[targetKey]) {
+            newItem[col.sentKey] = (item as any)[targetKey];
+          }
+        } else {
+          // Map Clima IDs to mock keys with improved fallback
+          const mockKeysMapping: Record<string, string> = {
+            'c2': 'q4_2024',
+            'c3': 'q3_2024',
+            'c4': 'q2_2024',
+            'c5': 'q1_2024',
+            'base-clima': 'q4_2024'
+          };
+          
+          const keys = ['q4_2024', 'q3_2024', 'q2_2024', 'q1_2024', 'q4_2023'];
+          const targetKey = mockKeysMapping[col.id] || keys[index] || 'q4_2024';
+
+          if ((item as any)[targetKey]) {
+            newItem[col.sentKey] = (item as any)[targetKey];
+          } else if ((item as any)[col.id]) {
+            newItem[col.sentKey] = (item as any)[col.id];
+          }
+        }
+      });
+      
+      // Safety defaults
+      if (!newItem.currentScore) newItem.currentScore = { positive: 0, neutral: 0, negative: 0, total: 0 };
+      return newItem;
+    });
+  }, [type, columns]);
+
+  const commentsSource = React.useMemo(() => {
+    return type === 'Cultura' ? CULTURA_COMMENTS_DETAIL : COMPARATIVE_COMMENTS_DETAIL;
+  }, [type]);
+
+  const aiInsightsSource = React.useMemo(() => {
+    const base = type === 'Cultura' ? CULTURA_AI_INSIGHTS : COMPARATIVE_AI_INSIGHTS;
+    if (selectedDimensionDetail) {
+      return {
+        ...base,
+        summary: `Análisis de IA para ${selectedDimensionDetail}: ${base.summary}`,
+        featuredInsights: Object.fromEntries(
+          Object.entries(base.featuredInsights).map(([k, v]) => [k, v.replace('La cultura de UBITS', `La dimensión de ${selectedDimensionDetail}`)])),
+        recurrentThemes: Object.fromEntries(
+          Object.entries(base.recurrentThemes).map(([k, v]) => [k, (v as any[]).map(t => ({ ...t, desc: `${t.desc} en ${selectedDimensionDetail}` }))]))
+      };
+    }
+    return base;
+  }, [type, selectedDimensionDetail]);
+
+  const filteredComments = React.useMemo(() => {
+    if (!selectedDimensionDetail) return commentsSource;
+    return commentsSource.filter(c => c.dimension === selectedDimensionDetail);
+  }, [selectedDimensionDetail, commentsSource]);
 
   // Tab-specific Filtering State
   type TabId = 'resumen' | 'favorabilidad' | 'participacion' | 'nps' | 'dimensionesTable' | 'dimensionesHeatmap' | 'preguntas' | 'comentarios';
@@ -459,16 +499,32 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   };
 
   const selectAllDimensions = () => {
-    setSelectedDimensions(COMPARATIVE_DIMENSIONS_DATA.map(d => d.name));
+    setSelectedDimensions(dimensionsData.map(d => d.name));
   };
 
   const deselectAllDimensions = () => {
     setSelectedDimensions([]);
   };
 
+  const selectAllQuestionDimensions = () => {
+    setSelectedQuestionDimensions(dimensionsData.map(d => d.name));
+  };
+
+  const deselectAllQuestionDimensions = () => {
+    setSelectedQuestionDimensions([]);
+  };
+
+  const selectAllSentimentDimensions = () => {
+    setSelectedSentimentDimensions(dimensionsData.map(d => d.name));
+  };
+
+  const deselectAllSentimentDimensions = () => {
+    setSelectedSentimentDimensions([]);
+  };
+
   // Filter and Sort Logic
   const filteredAndSortedDimensions = React.useMemo(() => {
-    let result = COMPARATIVE_DIMENSIONS_DATA.filter(d => selectedDimensions.includes(d.name));
+    let result = dimensionsData.filter(d => selectedDimensions.includes(d.name));
 
     // Apply Search Filter
     if (searchTerm) {
@@ -528,13 +584,13 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
     switch (sortCriteria) {
       case "mejora":
-        result.sort((a, b) => b.delta - a.delta);
+        result.sort((a, b) => (b.delta ?? -999) - (a.delta ?? -999));
         break;
       case "caida":
-        result.sort((a, b) => a.delta - b.delta);
+        result.sort((a, b) => (a.delta ?? 999) - (b.delta ?? 999));
         break;
       case "alto":
-        result.sort((a, b) => b.currentScore - a.currentScore);
+        result.sort((a, b) => (b.currentScore ?? 0) - (a.currentScore ?? 0));
         break;
       case "respuestas":
         result.sort((a, b) => (b.responses || 0) - (a.responses || 0));
@@ -545,7 +601,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
   // Questions Filter and Sort Logic
   const filteredAndSortedQuestions = React.useMemo(() => {
-    let result = COMPARATIVE_QUESTIONS_DATA.filter(q => selectedQuestionDimensions.includes(q.dimension));
+    let result = questionsData.filter(q => selectedQuestionDimensions.includes(q.dimension));
 
     // Apply Search Filter
     if (searchTerm) {
@@ -561,25 +617,17 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     if (filterCount > 0) {
       result = result.map(q => {
         const factor = (filterCount * 2.5) % 8;
-        // Apply factor to trend array as well (5 periods)
-        const newTrend = q.trend ? q.trend.map((val, idx) => {
-          // Progressively less impact on older data
-          const periodImpact = (idx + 1) / 5; 
-          return Math.max(0, Math.min(100, val - factor * periodImpact));
-        }) : [];
-        // Identify base score for delta (simulated from trend)
-        const baseVal = q.trend ? q.trend[0] : 60;
+        // Apply factor to currentScore and p1-p4
+        const adjust = (val: number) => Math.max(0, Math.min(100, val - factor));
 
         return {
           ...q,
-          q4_2024: newTrend[4] || q.q4_2024,
-          q3_2024: newTrend[3] || q.q3_2024,
-          q2_2024: newTrend[2] || q.q2_2024,
-          q1_2024: newTrend[1] || (q.trend ? q.trend[1] : 60),
-          q4_2023: newTrend[0] || (q.trend ? q.trend[0] : 58),
-          trend: newTrend,
-          // Correct delta logic: No delta for base period
-          delta: Number((newTrend[4] - baseVal).toFixed(1)),
+          currentScore: adjust(q.currentScore),
+          p1: adjust(q.p1),
+          p2: adjust(q.p2),
+          p3: adjust(q.p3),
+          p4: adjust(q.p4),
+          delta: Number((adjust(q.currentScore) - adjust(q.p1)).toFixed(1)),
           responses: Math.floor(q.responses * (0.7 + (factor % 3) / 10))
         };
       });
@@ -594,7 +642,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         result.sort((a, b) => a.delta - b.delta);
         break;
       case "alto":
-        result.sort((a, b) => b.q4_2024 - a.q4_2024);
+        result.sort((a, b) => b.currentScore - a.currentScore);
         break;
       case "respuestas":
         result.sort((a, b) => b.responses - a.responses);
@@ -603,9 +651,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     return result;
   }, [selectedQuestionDimensions, sortQuestionsCriteria, searchTerm, getActiveFiltersCount]);
 
-  // Sentiment Filter and Sort Logic
+
   const filteredAndSortedSentiment = React.useMemo(() => {
-    let result = COMPARATIVE_SENTIMENT_DATA.filter(s => selectedSentimentDimensions.includes(s.dimension));
+    let result = sentimentSource.filter(s => selectedSentimentDimensions.includes(s.dimension));
 
     // Apply Search Filter
     if (searchTerm) {
@@ -623,6 +671,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         
         // Helper to shift nested data
         const shiftData = (data: any) => {
+          if (!data) return data;
           const newPos = Math.max(0, data.positive - factor);
           const newNeg = Math.min(100, data.negative + (factor / 2));
           return {
@@ -634,22 +683,22 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
           };
         };
 
-        const shifted_q4 = shiftData(s.q4_2023);
-        const shifted_q3 = shiftData(s.q3_2024);
+        const shifted_current = shiftData(s.currentScore);
+        const shifted_p1 = shiftData(s.p1);
         return {
           ...s,
-          q4_2024: shifted_q4,
-          q3_2024: shifted_q3,
-          q2_2024: shiftData(s.q2_2024),
-          q1_2024: shiftData(s.q1_2024),
-          q4_2023: shiftData(s.q4_2023),
-          delta: Number((shifted_q4.positive - shifted_q3.positive).toFixed(1))
+          currentScore: shifted_current,
+          p1: shifted_p1,
+          p2: shiftData(s.p2),
+          p3: shiftData(s.p3),
+          p4: shiftData(s.p4),
+          delta: Number((shifted_current.positive - shifted_p1.positive).toFixed(1))
         };
       });
     } else {
       result = result.map(s => ({
         ...s,
-        delta: Number((s.q4_2024.positive - s.q3_2024.positive).toFixed(1))
+        delta: Number(((s.currentScore?.positive || 0) - (s.p1?.positive || 0)).toFixed(1))
       }));
     }
 
@@ -662,10 +711,10 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         result.sort((a, b) => a.delta - b.delta);
         break;
       case "alto":
-        result.sort((a, b) => b.q4_2024.positive - a.q4_2024.positive);
+        result.sort((a, b) => b.currentScore.positive - a.currentScore.positive);
         break;
       case "respuestas":
-        result.sort((a, b) => b.q4_2024.total - a.q4_2024.total);
+        result.sort((a, b) => b.currentScore.total - a.currentScore.total);
         break;
     }
     return result;
@@ -743,7 +792,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     }));
 
     // Filter dimensions by search term
-    const visibleDimensions = COMPARATIVE_DIMENSIONS_DATA.filter(d => {
+    const visibleDimensions = dimensionsData.filter(d => {
       if (!searchTerm) return true;
       const lowerSearch = searchTerm.toLowerCase();
       return d.name.toLowerCase().includes(lowerSearch) || 
@@ -977,15 +1026,25 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     return rawData;
   }, [getActiveFiltersCount, applyFilters, columns]);
 
-  // Executive Summary Data (Independent)
-  const resumenFavData = React.useMemo(() => getProcessedMetricData('resumen', COMPARATIVE_FAVORABILITY_DATA), [tabFilters.resumen, getProcessedMetricData]);
-  const resumenPartData = React.useMemo(() => getProcessedMetricData('resumen', COMPARATIVE_PARTICIPATION_DATA), [tabFilters.resumen, getProcessedMetricData]);
-  const resumenNpsData = React.useMemo(() => getProcessedMetricData('resumen', COMPARATIVE_NPS_DATA, true), [tabFilters.resumen, getProcessedMetricData]);
+  const favorabilitySource = React.useMemo(() => {
+    return type === 'Cultura' ? CULTURA_FAVORABILITY_DATA : COMPARATIVE_FAVORABILITY_DATA;
+  }, [type]);
 
-  // Tab-specific Data (Independent)
-  const favData = React.useMemo(() => getProcessedMetricData('favorabilidad', COMPARATIVE_FAVORABILITY_DATA), [tabFilters.favorabilidad, getProcessedMetricData]);
-  const partData = React.useMemo(() => getProcessedMetricData('participacion', COMPARATIVE_PARTICIPATION_DATA), [tabFilters.participacion, getProcessedMetricData]);
-  const npsData = React.useMemo(() => getProcessedMetricData('nps', COMPARATIVE_NPS_DATA, true), [tabFilters.nps, getProcessedMetricData]);
+  const participationSource = React.useMemo(() => {
+    return type === 'Cultura' ? CULTURA_PARTICIPATION_DATA : COMPARATIVE_PARTICIPATION_DATA;
+  }, [type]);
+
+  const npsSource = React.useMemo(() => {
+    return type === 'Cultura' ? CULTURA_NPS_DATA : COMPARATIVE_NPS_DATA;
+  }, [type]);
+
+  const resumenFavData = React.useMemo(() => getProcessedMetricData('resumen', favorabilitySource), [tabFilters.resumen, getProcessedMetricData, favorabilitySource]);
+  const resumenPartData = React.useMemo(() => getProcessedMetricData('resumen', participationSource), [tabFilters.resumen, getProcessedMetricData, participationSource]);
+  const resumenNpsData = React.useMemo(() => getProcessedMetricData('resumen', npsSource), [tabFilters.resumen, getProcessedMetricData, npsSource]);
+
+  const favData = React.useMemo(() => getProcessedMetricData('favorabilidad', favorabilitySource), [tabFilters.favorabilidad, getProcessedMetricData, favorabilitySource]);
+  const partData = React.useMemo(() => getProcessedMetricData('participacion', participationSource), [tabFilters.participacion, getProcessedMetricData, participationSource]);
+  const npsData = React.useMemo(() => getProcessedMetricData('nps', npsSource), [tabFilters.nps, getProcessedMetricData, npsSource]);
 
   // --- Favorability Prep (Resumen) ---
   const resumenFavTrendSeries = React.useMemo(() => resumenFavData?.trendData ? [{
@@ -1258,16 +1317,14 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       return [];
     }
 
-    const sentimentData = COMPARATIVE_SENTIMENT_DATA.find(s => s.dimension === selectedDimensionDetail);
+    const sentimentData = sentimentSource.find(s => s.dimension === selectedDimensionDetail);
     if (!sentimentData) {
       return [];
     }
 
     // Build items from selected surveys in columns
     const items = columns.map((col, index) => {
-      // Map currentScore to q4_2024 since currentScore doesn't exist in sentiment mock data
-      const mappedKey = col.sentKey === 'currentScore' ? 'q4_2024' : col.sentKey;
-      const data = (sentimentData as any)[mappedKey];
+      const data = (sentimentData as any)[col.sentKey];
 
       if (!data) {
         return null;
@@ -1277,8 +1334,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       let delta = 0;
       if (index > 0) {
         const prevCol = columns[index - 1];
-        const prevMappedKey = prevCol.sentKey === 'currentScore' ? 'q4_2024' : prevCol.sentKey;
-        const prevData = (sentimentData as any)[prevMappedKey];
+        const prevData = (sentimentData as any)[prevCol.sentKey];
         if (prevData) {
           delta = data.positive - prevData.positive;
         }
@@ -1286,7 +1342,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
       const item = {
         id: `sent-survey-${col.id}`,
-        label: col.dataKey + (col.isBase ? ' (BASE)' : ''),
+        label: col.shortLabel + (col.isBase ? ' (BASE)' : ''),
         value: formatPercentage(data.positive),
         segments: [
           { id: `pos-${col.id}`, label: 'Positivo', value: formatPercentage(data.positive), percentage: formatPercentage(data.positive), tone: 'positive' as const },
@@ -1301,7 +1357,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     }).filter(Boolean);
 
     return items;
-  }, [selectedDimensionDetail, columns]);
+  }, [selectedDimensionDetail, columns, sentimentSource]);
 
   // Get filters specific to each section/tab
   const getSectionFilters = React.useCallback((tabId: string) => {
@@ -1331,7 +1387,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       }
     } else if (tabId === 'preguntas') {
       if (selectedQuestionDimensions.length > 0) {
-        const allQuestionDims = Array.from(new Set(COMPARATIVE_QUESTIONS_DATA.map((q: any) => q.dimension)));
+        const allQuestionDims = Array.from(new Set(questionsData.map((q: any) => q.dimension)));
         if (selectedQuestionDimensions.length < allQuestionDims.length) {
           filters['Dimensiones'] = selectedQuestionDimensions;
         }
@@ -1615,7 +1671,12 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
       <main className="flex-1 overflow-auto scrollbar-hide bg-background">
         <Sheet open={isFiltersDrawerOpen} onOpenChange={setIsFiltersDrawerOpen}>
-          <SheetContent showCloseButton={false} side="right" className="w-[460px] sm:max-w-[460px] h-full p-0 border-l border-border/10 bg-background overflow-hidden flex flex-col shadow-2xl">
+          <SheetContent 
+            showCloseButton={false} 
+            side="right" 
+            className="w-[460px] sm:max-w-[460px] h-full p-0 border-l border-border/10 bg-background overflow-hidden flex flex-col shadow-2xl"
+            aria-describedby={undefined}
+          >
             <div className="flex flex-col h-full">
               {/* Header */}
               <div className="p-6 pb-4 bg-white border-b border-border/10 shrink-0">
@@ -1624,12 +1685,12 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                     <SheetTitle className="text-lg font-bold tracking-tight text-text-primary">
                       {activeFilterTab === 'dimensionesHeatmap' ? 'Segmentación' : 'Filtros Demográficos'}
                     </SheetTitle>
-                    <p className="text-sm font-bold text-text-secondary-foreground">
+                    <SheetDescription className="text-sm font-bold text-text-secondary-foreground">
                       {activeFilterTab === 'dimensionesHeatmap' 
                         ? 'Define múltiples niveles de segmentación para análisis granular'
                         : 'Filtra por características demográficas de los participantes'
                       }
-                    </p>
+                    </SheetDescription>
                   </div>
                   <Button 
                     variant="ghost" 
@@ -1891,7 +1952,10 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
            </Button>
         </div>
 
-        <div className="px-4 sm:px-10 pt-2 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className={cn(
+          "px-4 sm:px-10 pt-2 grid grid-cols-1 gap-8",
+          type === 'Cultura' ? "lg:grid-cols-2" : "lg:grid-cols-3"
+        )}>
            {/* Favorability Card */}
            <Card className="border border-border/40 bg-surface shadow-sm rounded-[40px] overflow-hidden group hover:shadow-xl hover:border-border/60 transition-all duration-500 flex flex-col min-h-[600px]">
              <CardHeader className="px-8 pt-8 pb-4">
@@ -2063,89 +2127,91 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
            </Card>
 
            {/* NPS Card */}
-           <Card className="border border-border/40 bg-surface shadow-sm rounded-[40px] overflow-hidden group hover:shadow-xl hover:border-border/60 transition-all duration-500 flex flex-col min-h-[600px]">
-             <CardHeader className="px-8 pt-8 pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center text-brand group-hover:scale-110 transition-transform shadow-inner">
-                      <Star className="h-6 w-6" />
+           {type !== 'Cultura' && (
+             <Card className="border border-border/40 bg-surface shadow-sm rounded-[40px] overflow-hidden group hover:shadow-xl hover:border-border/60 transition-all duration-500 flex flex-col min-h-[600px]">
+               <CardHeader className="px-8 pt-8 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center text-brand group-hover:scale-110 transition-transform shadow-inner">
+                        <Star className="h-6 w-6" />
+                      </div>
+                      <div className="flex flex-col">
+                        <h3 className="text-base font-bold text-text-primary tracking-tight">NPS</h3>
+                        <span className="text-xs font-bold text-text-secondary tracking-tight">Net Promoter Score</span>
+                      </div>
                     </div>
-                    <div className="flex flex-col">
-                      <h3 className="text-base font-bold text-text-primary tracking-tight">NPS</h3>
-                      <span className="text-xs font-bold text-text-secondary tracking-tight">Net Promoter Score</span>
+                  
+                    {/* Segmented Control Toggle */}
+                    <div className="bg-muted/30 p-1.5 rounded-xl border border-border/5 flex items-center gap-1">
+                      <button 
+                        onClick={() => setActiveViewTopNPS('detalle')}
+                        className={cn(
+                          "px-4 py-2 text-xs font-bold tracking-tight rounded-lg transition-all",
+                          activeViewTopNPS === 'detalle' ? "bg-surface text-brand shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
+                        )}
+                      >
+                        Detalle
+                      </button>
+                      <button 
+                        onClick={() => setActiveViewTopNPS('tendencia')}
+                        className={cn(
+                          "px-4 py-2 text-xs font-bold tracking-tight rounded-lg transition-all",
+                          activeViewTopNPS === 'tendencia' ? "bg-surface text-brand shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
+                        )}
+                      >
+                        Tendencia
+                      </button>
                     </div>
                   </div>
-                
-                  {/* Segmented Control Toggle */}
-                  <div className="bg-muted/30 p-1.5 rounded-xl border border-border/5 flex items-center gap-1">
-                    <button 
-                      onClick={() => setActiveViewTopNPS('detalle')}
-                      className={cn(
-                        "px-4 py-2 text-xs font-bold tracking-tight rounded-lg transition-all",
-                        activeViewTopNPS === 'detalle' ? "bg-surface text-brand shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
-                      )}
-                    >
-                      Detalle
-                    </button>
-                    <button 
-                      onClick={() => setActiveViewTopNPS('tendencia')}
-                      className={cn(
-                        "px-4 py-2 text-xs font-bold tracking-tight rounded-lg transition-all",
-                        activeViewTopNPS === 'tendencia' ? "bg-surface text-brand shadow-sm" : "text-text-secondary/40 hover:text-text-secondary"
-                      )}
-                    >
-                      Tendencia
-                    </button>
-                  </div>
-                </div>
-             </CardHeader>
+               </CardHeader>
 
-             <CardContent className="flex-1 px-8 pb-6">
-                <div className="h-full flex flex-col justify-center relative">
-                  {activeViewTopNPS === 'detalle' ? (
-                    <div className="animate-in fade-in slide-in-from-left-2 duration-500 h-full flex flex-col justify-center space-y-8">
-                      {resumenBaseNpsItem ? (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 mb-3">
-                            <span className="text-sm font-bold text-text-primary">{resumenBaseNpsItem.label}</span>
-                            <span className="px-2 py-1 bg-brand/10 text-brand text-xs font-bold rounded-lg">BASE</span>
+               <CardContent className="flex-1 px-8 pb-6">
+                  <div className="h-full flex flex-col justify-center relative">
+                    {activeViewTopNPS === 'detalle' ? (
+                      <div className="animate-in fade-in slide-in-from-left-2 duration-500 h-full flex flex-col justify-center space-y-8">
+                        {resumenBaseNpsItem ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="text-sm font-bold text-text-primary">{resumenBaseNpsItem.label}</span>
+                              <span className="px-2 py-1 bg-brand/10 text-brand text-xs font-bold rounded-lg">BASE</span>
+                            </div>
+                            <div className="text-3xl font-bold text-brand">{resumenBaseNpsItem.value}%</div>
                           </div>
-                          <div className="text-3xl font-bold text-brand">{resumenBaseNpsItem.value}%</div>
-                        </div>
-                      ) : null}
-                      <ResponseStackedBarGroup
-                        items={resumenNpsDistributionItems}
-                        showLegend={false}
-                        showPercentages
-                        size="md"
-                        compact
-                        className="space-y-8"
-                      />
-                    </div>
-                  ) : (
-                    <div className="animate-in fade-in slide-in-from-right-2 duration-500 h-full flex flex-col justify-center">
-                      <TrendMetricLineChart 
-                        series={resumenNpsTrendSeries}
-                        height={280}
-                        showLegend={false}
-                        showComparison={false}
-                        standalone
-                      />
-                    </div>
-                  )}
-                </div>
-             </CardContent>
+                        ) : null}
+                        <ResponseStackedBarGroup
+                          items={resumenNpsDistributionItems}
+                          showLegend={false}
+                          showPercentages
+                          size="md"
+                          compact
+                          className="space-y-8"
+                        />
+                      </div>
+                    ) : (
+                      <div className="animate-in fade-in slide-in-from-right-2 duration-500 h-full flex flex-col justify-center">
+                        <TrendMetricLineChart 
+                          series={resumenNpsTrendSeries}
+                          height={280}
+                          showLegend={false}
+                          showComparison={false}
+                          standalone
+                        />
+                      </div>
+                    )}
+                  </div>
+               </CardContent>
 
-             {activeViewTopNPS === 'tendencia' && (
-               <div className="mt-auto bg-muted/5 border-t border-border/10 px-8 py-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                 <MetricComparisonFooter 
-                   items={resumenNpsFooterItems}
-                   columns={3}
-                   className="border-none p-0 bg-transparent"
-                 />
-               </div>
-             )}
-           </Card>
+               {activeViewTopNPS === 'tendencia' && (
+                 <div className="mt-auto bg-muted/5 border-t border-border/10 px-8 py-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                   <MetricComparisonFooter 
+                     items={resumenNpsFooterItems}
+                     columns={3}
+                     className="border-none p-0 bg-transparent"
+                   />
+                 </div>
+               )}
+             </Card>
+           )}
         </div>
 
         {/* 3. Functional Content Area */}
@@ -2578,7 +2644,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                   </div>
                                   <DropdownMenuSeparator />
                                   <div className="space-y-1 mt-1">
-                                    {COMPARATIVE_DIMENSIONS_DATA.map(dim => (
+                                    {dimensionsData.map(dim => (
                                       <DropdownMenuCheckboxItem 
                                         key={dim.id}
                                         checked={selectedDimensions.includes(dim.name)}
@@ -2753,9 +2819,12 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                     </div>
                                   </TableCell>
                                   {columns.map((col) => {
-                                    const score = (dim as any)[col.dimKey] || 0;
+                                    const rawScore = (dim as any)[col.dimKey];
+                                    const score = rawScore !== null && rawScore !== undefined ? rawScore : null;
                                     const baseCol = columns.find(c => c.isBase);
-                                    const baseScore = baseCol ? (dim as any)[baseCol.dimKey] : dim.currentScore;
+                                    const rawBaseScore = baseCol ? (dim as any)[baseCol.dimKey] : dim.currentScore;
+                                    const baseScore = rawBaseScore !== null && rawBaseScore !== undefined ? rawBaseScore : null;
+
                                     return (
                                       <TableCell key={col.id} className="text-center">
                                         <div className="flex flex-col items-center gap-1.5">
@@ -2764,9 +2833,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                               "font-bold",
                                               col.isBase ? "text-base text-brand" : "text-sm text-text-secondary"
                                             )}>
-                                              {score}%
+                                              {score !== null ? `${score}%` : '—'}
                                             </span>
-                                            {!col.isBase && (
+                                            {!col.isBase && score !== null && baseScore !== null && (
                                               <DeltaPill value={Number((score - baseScore).toFixed(1))} size="xs" />
                                             )}
                                           </div>
@@ -2931,7 +3000,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                 </div>
                                 <DropdownMenuSeparator />
                                 <div className="space-y-1 mt-1">
-                                  {COMPARATIVE_DIMENSIONS_DATA.map(dim => (
+                                  {dimensionsData.map(dim => (
                                     <DropdownMenuCheckboxItem 
                                       key={dim.id}
                                       checked={selectedQuestionDimensions.includes(dim.name)}
@@ -3054,9 +3123,12 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                   </div>
                                 </TableCell>
                                 {columns.map((col) => {
-                                  const score = (item as any)[col.quesKey] || 0;
+                                  const rawScore = (item as any)[col.quesKey];
+                                  const score = rawScore !== null && rawScore !== undefined ? rawScore : null;
                                   const baseCol = columns.find(c => c.isBase);
-                                  const baseScore = baseCol ? (item as any)[baseCol.quesKey] : (item as any).q4_2024;
+                                  const rawBaseScore = baseCol ? (item as any)[baseCol.quesKey] : (item as any).q4_2024;
+                                  const baseScore = rawBaseScore !== null && rawBaseScore !== undefined ? rawBaseScore : null;
+
                                   return (
                                     <TableCell key={col.id} className="text-center">
                                       <div className="flex flex-col items-center gap-1.5">
@@ -3065,9 +3137,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                             "font-bold",
                                             col.isBase ? "text-base text-brand" : "text-sm text-text-secondary"
                                           )}>
-                                            {score}%
+                                            {score !== null ? `${score}%` : '—'}
                                           </span>
-                                          {!col.isBase && (
+                                          {!col.isBase && score !== null && baseScore !== null && (
                                             <DeltaPill value={Number((score - baseScore).toFixed(1))} size="xs" />
                                           )}
                                         </div>
@@ -3145,7 +3217,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                               </div>
                               <DropdownMenuSeparator />
                               <div className="space-y-1 mt-1">
-                                {COMPARATIVE_DIMENSIONS_DATA.map(dim => (
+                                {dimensionsData.map(dim => (
                                   <DropdownMenuCheckboxItem 
                                     key={dim.id}
                                     checked={selectedSentimentDimensions.includes(dim.name)}
@@ -3263,9 +3335,13 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                   </div>
                                 </TableCell>
                                 {columns.map((col) => {
-                                  const data = (item as any)[col.sentKey] || { positive: 0, total: 0 };
+                                  const rawData = (item as any)[col.sentKey];
+                                  const data = rawData && typeof rawData === 'object' ? rawData : null;
+                                  
                                   const baseCol = columns.find(c => c.isBase);
-                                  const baseData = (baseCol && (item as any)[baseCol.sentKey]) || (item as any).q4_2024 || { positive: 0, total: 0 };
+                                  const rawBaseData = baseCol ? (item as any)[baseCol.sentKey] : null;
+                                  const baseData = rawBaseData && typeof rawBaseData === 'object' ? rawBaseData : null;
+
                                   return (
                                     <TableCell key={col.id} className="text-center">
                                       <div className="flex flex-col items-center gap-1.5">
@@ -3274,13 +3350,15 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                             "font-bold",
                                             col.isBase ? "text-base text-brand" : "text-sm text-text-secondary"
                                           )}>
-                                            {data.positive}%
+                                            {data !== null ? `${data.positive}%` : '—'}
                                           </span>
-                                          {!col.isBase && (
+                                          {!col.isBase && data !== null && baseData !== null && (
                                             <DeltaPill value={Number((data.positive - baseData.positive).toFixed(1))} size="xs" />
                                           )}
                                         </div>
-                                        <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">n={data.total}</span>
+                                        <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">
+                                          {data !== null ? `n=${data.total}` : 'n=0'}
+                                        </span>
                                       </div>
                                     </TableCell>
                                   );
@@ -3320,7 +3398,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                   </CardHeader>
                   <CardContent className="pt-6">
                     <p className="text-sm leading-relaxed text-text-secondary font-medium">
-                      {COMPARATIVE_AI_INSIGHTS.summary}
+                      {aiInsightsSource.summary}
                     </p>
                   </CardContent>
                 </Card>
@@ -3332,7 +3410,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                     <h3 className="text-sm font-bold text-text-brand tracking-tight">Hallazgos de Alto Impacto</h3>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                    {COMPARATIVE_AI_INSIGHTS.highImpactFindings.map((finding) => (
+                    {aiInsightsSource.highImpactFindings.map((finding) => (
                       <AIInsightCard
                         key={finding.id}
                         title={finding.title}
@@ -3356,7 +3434,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                     <CardHeader className="pb-3 bg-gradient-to-r from-brand/5 to-transparent border-b border-border/20">
                       <div className="space-y-1">
                         <h4 className="text-base font-bold text-text-brand tracking-tight">Evolución Proyectada</h4>
-                        <p className="text-xs text-text-secondary/60 font-medium">{COMPARATIVE_AI_INSIGHTS.predictions.summary}</p>
+                        <p className="text-xs text-text-secondary/60 font-medium">{aiInsightsSource.predictions?.summary || "Cargando predicciones..."}</p>
                       </div>
                     </CardHeader>
                     <CardContent className="pt-6">
@@ -3364,7 +3442,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                         series={[
                           {
                             label: "Favorabilidad Proyectada",
-                            data: COMPARATIVE_AI_INSIGHTS.predictions.scenarios.map(s => ({
+                            data: (aiInsightsSource.predictions?.scenarios || []).map(s => ({
                               label: s.label,
                               value: s.predicted,
                               total: 0
@@ -3388,11 +3466,11 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                     <h3 className="text-sm font-bold text-text-brand tracking-tight">Probabilidades por Escenario</h3>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                    {COMPARATIVE_AI_INSIGHTS.predictions.scenarios.map((scenario) => (
+                    {(aiInsightsSource.predictions?.scenarios || []).map((scenario) => (
                       <Card key={scenario.label} className="border border-border/40 bg-surface shadow-sm rounded-[2rem] overflow-hidden">
                         <CardHeader className="pb-4">
                           <h4 className="font-semibold text-text-brand">{scenario.label}</h4>
-                          <p className="text-2xl font-bold text-text-primary mt-2">{scenario.predicted.toFixed(1)}%</p>
+                          <p className="text-2xl font-bold text-text-primary mt-2">{(scenario.predicted || 0).toFixed(1)}%</p>
                         </CardHeader>
                         <CardContent className="space-y-3">
                           <div className="space-y-2">
@@ -3435,16 +3513,21 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       </main>
 
       <Sheet open={isCommentDetailOpen} onOpenChange={setIsCommentDetailOpen}>
-        <SheetContent showCloseButton={false} side="right" className="!w-[40%] !max-w-none h-full p-0 border-l border-border/10 bg-background overflow-hidden flex flex-col shadow-2xl">
+        <SheetContent 
+          showCloseButton={false} 
+          side="right" 
+          className="!w-[40%] !max-w-none h-full p-0 border-l border-border/10 bg-background overflow-hidden flex flex-col shadow-2xl"
+          aria-describedby={undefined}
+        >
           {/* Drawer Header - Elevated for accessibility and hierarchy */}
           <SheetHeader className="p-6 pb-4 bg-white shrink-0 border-b border-border/10 text-left relative flex flex-row items-center justify-between">
             <div className="space-y-0.5">
               <SheetTitle className="text-lg font-bold text-text-primary leading-none tracking-tight">
                 {selectedDimensionDetail || "Cargando..."}
               </SheetTitle>
-              <p className="text-sm font-semibold text-text-secondary-foreground tracking-tight opacity-60">
+              <SheetDescription className="text-sm font-semibold text-text-secondary-foreground tracking-tight opacity-60">
                 Análisis cualitativo
-              </p>
+              </SheetDescription>
             </div>
             <SheetClose asChild>
               <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-muted/5 border border-transparent hover:border-border/10 transition-all">
@@ -3504,7 +3587,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                               <Users className="h-3 w-3 text-brand" />
                               <span className="text-xs font-bold text-text-brand tracking-tight">
                                 Total Respuestas: {(() => {
-                                  const sentimentData = COMPARATIVE_SENTIMENT_DATA.find(s => s.dimension === selectedDimensionDetail);
+                                  const sentimentData = sentimentSource.find(s => s.dimension === selectedDimensionDetail);
                                   if (!sentimentData || !baseColumn) return 0;
                                   return (sentimentData as any)[baseColumn.sentKey]?.total || 0;
                                 })()}
@@ -3554,41 +3637,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                     <Hash className="h-40 w-40 text-brand" />
                                   </div>
                                   <div className="relative z-10 flex flex-col gap-4">
-                                    {(sentiment === 'positive' 
-                                      ? [
-                                          { word: 'Feedback', count: 42 },
-                                          { word: 'Cercanía', count: 35 },
-                                          { word: 'Comunicación', count: 28 },
-                                          { word: 'Procesos', count: 24 },
-                                          { word: 'Confianza', count: 18 },
-                                          { word: 'Escucha', count: 15 },
-                                          { word: 'Claridad', count: 12 },
-                                          { word: 'Apoyo', count: 10 },
-                                          { word: 'Liderazgo', count: 8 }
-                                        ]
-                                      : sentiment === 'negative'
-                                      ? [
-                                          { word: 'Carga', count: 56 },
-                                          { word: 'Estrés', count: 48 },
-                                          { word: 'Salarios', count: 32 },
-                                          { word: 'Reconocimiento', count: 25 },
-                                          { word: 'Burocracia', count: 20 },
-                                          { word: 'Tiempos', count: 15 },
-                                          { word: 'Fricción', count: 10 },
-                                          { word: 'Herramientas', count: 8 },
-                                          { word: 'Silos', count: 6 }
-                                        ]
-                                      : [
-                                          { word: 'Estabilidad', count: 38 },
-                                          { word: 'Seguimiento', count: 30 },
-                                          { word: 'Herramientas', count: 25 },
-                                          { word: 'Comunicación', count: 22 },
-                                          { word: 'Horarios', count: 18 },
-                                          { word: 'Flujo', count: 12 },
-                                          { word: 'Trámites', count: 8 },
-                                          { word: 'Procesos', count: 6 },
-                                          { word: 'Soporte', count: 4 }
-                                        ]
+                                    {(aiInsightsSource.topKeywords?.[sentiment as keyof typeof aiInsightsSource.topKeywords] || []
                                     ).map((item, idx, arr) => {
                                       const maxCount = arr[0].count;
                                       const percentage = (item.count / maxCount) * 100;
@@ -3660,23 +3709,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                   <Target className="h-40 w-40 text-brand" />
                                 </div>
                                 <div className="relative z-10 flex flex-col gap-6">
-                                  {(sentiment === 'positive'
-                                    ? [
-                                        { text: 'Acompañamiento del líder', count: 12, trend: 'up', relevance: 0.95, recurrent: true, desc: 'Percepción alta de soporte directo' },
-                                        { text: 'Plan de carrera claro', count: 8, trend: 'stable', relevance: 0.82, recurrent: true, desc: 'Visibilidad de crecimiento interno' },
-                                        { text: 'Balance vida-trabajo', count: 6, trend: 'up', relevance: 0.78, recurrent: false, desc: 'Mejora en la gestión de horarios' }
-                                      ]
-                                    : sentiment === 'negative'
-                                    ? [
-                                        { text: 'Exceso de reuniones', count: 18, trend: 'up', relevance: 0.98, recurrent: true, desc: 'Impacto directo en la productividad' },
-                                        { text: 'Falta de feedback', count: 14, trend: 'down', relevance: 0.88, recurrent: true, desc: 'Necesidad de mayor retroalimentación' },
-                                        { text: 'Complejidad técnica', count: 9, trend: 'stable', relevance: 0.75, recurrent: false, desc: 'Fricción en herramientas internas' }
-                                      ]
-                                    : [
-                                        { text: 'Procesos estables', count: 15, trend: 'stable', relevance: 0.90, recurrent: true, desc: 'Consistencia operativa detectada' },
-                                        { text: 'Herramientas de trabajo', count: 10, trend: 'up', relevance: 0.85, recurrent: true, desc: 'Adopción de nuevas plataformas' },
-                                        { text: 'Comunicación interna', count: 7, trend: 'down', relevance: 0.70, recurrent: false, desc: 'Oportunidad de mejora en canales' }
-                                      ]
+                                  {(aiInsightsSource.recurrentThemes?.[sentiment as keyof typeof aiInsightsSource.recurrentThemes] || []
                                   ).map((item, idx) => (
                                     <div key={idx} className="p-6 rounded-3xl bg-surface-subtle/50 border border-border/5 hover:border-brand/20 transition-all duration-500 group/item relative overflow-hidden">
                                       <div className="absolute inset-0 bg-gradient-to-r from-brand/[0.02] to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity" />
@@ -3747,11 +3780,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                     <span className="text-[10px] font-bold text-brand tracking-tight uppercase">IA Focus Insight</span>
                                   </div>
                                   <p className="text-base font-bold text-text-brand leading-[1.6] tracking-tight">
-                                    {sentiment === 'positive' 
-                                      ? '«El liderazgo actual se percibe como el motor principal del compromiso, destacando la empatía y la claridad en la dirección estratégica como factores clave de éxito.»'
-                                      : sentiment === 'negative'
-                                      ? '«Se identifica una correlación crítica entre la carga laboral y la rotación potencial. El equipo manifiesta fatiga por procesos burocráticos que dilatan las entregas.»'
-                                      : '«La estabilidad es la nota dominante, sugiriendo un periodo de consolidación operativa donde el foco está en la optimización de las herramientas actuales.»'}
+                                  {aiInsightsSource.featuredInsights?.[sentiment as keyof typeof aiInsightsSource.featuredInsights]}
                                   </p>
                                 </div>
 
@@ -3786,26 +3815,8 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                             </div>
 
                             <div className="space-y-5">
-                              {[
-                                { 
-                                  title: 'CLARIDAD EN OBJETIVOS', 
-                                  frequency: 'ALTA FRECUENCIA', 
-                                  confidence: '92% Confianza', 
-                                  total: 36, 
-                                  text: 'Existe una mejora notable en cómo los líderes definen los OKRs y comunican las expectativas del trimestre.', 
-                                  periods: ['Q4', 'Q2', 'Q1'], 
-                                  detected: 'DETECTADO EN TODOS LOS PERIODOS' 
-                                },
-                                { 
-                                  title: 'ACOMPAÑAMIENTO 1:1', 
-                                  frequency: 'FRECUENCIA MEDIA', 
-                                  confidence: '78% Confianza', 
-                                  total: 22, 
-                                  text: 'Los espacios individuales de coaching han ganado calidad, permitiendo una conexión más humana con el liderazgo.', 
-                                  periods: ['Q4', 'Q2'], 
-                                  detected: 'DETECTADO EN Q4 Y Q2' 
-                                }
-                              ].map((item, idx) => (
+                              {(aiInsightsSource.recurrentComments?.[sentiment as keyof typeof aiInsightsSource.recurrentComments] || []
+                              ).map((item, idx) => (
                                 <div key={idx} className="rounded-2xl border border-border/10 bg-surface overflow-hidden shadow-sm hover:border-brand/20 transition-all duration-300 group">
                                   {/* Top Bar */}
                                   <div className="px-6 py-4 flex items-center justify-between border-b border-border/5">
@@ -3835,7 +3846,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                   {/* Bottom Bar */}
                                   <div className="px-6 py-4 bg-surface flex items-center justify-between border-t border-border/5">
                                     <div className="flex items-center gap-1.5">
-                                      {item.periods.map(p => (
+                                      {item.periods?.map(p => (
                                         <div key={p} className={cn(
                                           "h-6 w-6 rounded-full flex items-center justify-center text-[9px] font-bold border transition-colors",
                                           p === 'Q4' ? "bg-brand text-text-inverse border-brand" : "bg-surface-subtle text-text-secondary/40 border-border/20"
@@ -3872,7 +3883,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
       {/* Export Dialog */}
       <Sheet open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
-        <SheetContent showCloseButton={false} side="right" className="w-[460px] sm:max-w-[460px] h-full p-0 border-l border-border/10 bg-background overflow-hidden flex flex-col shadow-2xl">
+        <SheetContent aria-describedby={undefined} showCloseButton={false} side="right" className="w-[460px] sm:max-w-[460px] h-full p-0 border-l border-border/10 bg-background overflow-hidden flex flex-col shadow-2xl">
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className="p-6 pb-4 bg-white border-b border-border/10 shrink-0">
@@ -3881,9 +3892,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                   <SheetTitle className="text-lg font-bold tracking-tight text-text-primary">
                     Exportar Informe
                   </SheetTitle>
-                  <p className="text-sm font-bold text-text-secondary-foreground">
+                  <SheetDescription className="text-sm font-bold text-text-secondary-foreground">
                     Elige el formato y opciones de exportación
-                  </p>
+                  </SheetDescription>
                 </div>
                 <Button
                   variant="ghost"
@@ -4025,7 +4036,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
       {/* Share Dialog */}
       <Sheet open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-        <SheetContent showCloseButton={false} side="right" className="w-[460px] sm:max-w-[460px] h-full p-0 border-l border-border/10 bg-background overflow-hidden flex flex-col shadow-2xl">
+        <SheetContent aria-describedby={undefined} showCloseButton={false} side="right" className="w-[460px] sm:max-w-[460px] h-full p-0 border-l border-border/10 bg-background overflow-hidden flex flex-col shadow-2xl">
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className="p-6 pb-4 bg-white border-b border-border/10 shrink-0">
@@ -4034,9 +4045,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                   <SheetTitle className="text-lg font-bold tracking-tight text-text-primary">
                     Compartir Análisis
                   </SheetTitle>
-                  <p className="text-sm font-bold text-text-secondary-foreground">
+                  <SheetDescription className="text-sm font-bold text-text-secondary-foreground">
                     Copia el enlace para compartir con tu equipo
-                  </p>
+                  </SheetDescription>
                 </div>
                 <Button
                   variant="ghost"

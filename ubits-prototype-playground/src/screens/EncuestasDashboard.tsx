@@ -277,11 +277,24 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
     // Find latest survey of this type as base
     const typeSurveys = surveys.filter(s => s.type === val && s.status === "Finalizado");
     
-    // For the mock, we know Q4 2024 is the latest. 
     const latest = [...typeSurveys].sort((a, b) => {
-      if (a.name.includes("Q4 2024")) return -1;
-      if (b.name.includes("Q4 2024")) return 1;
-      return b.id.localeCompare(a.id);
+      // Robust sorting by year and quarter
+      const getScore = (item: any) => {
+        const yearMatch = item.name.match(/202\d/);
+        const year = yearMatch ? parseInt(yearMatch[0]) : 0;
+        
+        const quarterMatch = item.name.match(/Q(\d)/);
+        const quarter = quarterMatch ? parseInt(quarterMatch[1]) : 0;
+        
+        // Month fallback for Cultura surveys that might just have years
+        const monthMap: Record<string, number> = { 'ene': 1, 'feb': 2, 'mar': 3, 'abr': 4, 'may': 5, 'jun': 6, 'jul': 7, 'ago': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dic': 12 };
+        const monthStr = item.startDate?.split(' ')[1]?.toLowerCase();
+        const month = monthMap[monthStr] || 0;
+
+        return year * 1000 + quarter * 100 + month;
+      };
+
+      return getScore(b) - getScore(a);
     })[0];
 
     setSelectedBaseId(latest?.id || null);
@@ -339,25 +352,29 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
         <ChevronDown className="h-4 w-4 opacity-50 group-data-[state=open]:rotate-180 transition-transform duration-200" />
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl border-border/40 shadow-xl bg-popover animate-in fade-in-0 zoom-in-95">
-      <DropdownMenuLabel className="px-2 py-1.5 text-[10px] font-bold text-text-secondary/40 uppercase tracking-widest">Opciones de creación</DropdownMenuLabel>
-      <DropdownMenuSeparator className="bg-border/40 my-1.5" />
-      <DropdownMenuItem className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer focus:bg-accent focus:text-accent-foreground transition-all group">
-        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center group-focus:bg-background transition-colors">
-          <Plus className="h-4 w-4 text-text-secondary group-focus:text-primary" />
+    <DropdownMenuContent 
+      align="end" 
+      sideOffset={8}
+      className="w-72 p-2 rounded-2xl border border-border/40 shadow-2xl bg-white animate-in fade-in-0 zoom-in-95 z-[100]"
+    >
+      <DropdownMenuLabel className="px-3 py-2 text-[10px] font-bold text-text-secondary/40 uppercase tracking-widest">Opciones de creación</DropdownMenuLabel>
+      <DropdownMenuSeparator className="bg-border/40 mx-1 my-1" />
+      <DropdownMenuItem className="flex items-center gap-4 p-3 rounded-xl cursor-pointer focus:bg-brand/5 focus:text-brand transition-all group outline-none border border-transparent focus:border-brand/10">
+        <div className="h-10 w-10 rounded-xl bg-muted/40 flex items-center justify-center group-focus:bg-white group-focus:shadow-sm transition-all border border-transparent group-focus:border-brand/10">
+          <Plus className="h-5 w-5 text-text-secondary group-focus:text-brand" />
         </div>
         <div className="flex flex-col gap-0.5">
-          <span className="text-[13px] font-bold tracking-tight">Crear en blanco</span>
-          <span className="text-[10px] text-text-secondary/50 font-medium">Empieza desde cero</span>
+          <span className="text-[14px] font-bold tracking-tight">Crear en blanco</span>
+          <span className="text-[11px] text-text-secondary/50 font-medium">Empieza desde cero</span>
         </div>
       </DropdownMenuItem>
-      <DropdownMenuItem className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer focus:bg-accent focus:text-accent-foreground transition-all group">
-        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center group-focus:bg-background transition-colors">
-          <Layout className="h-4 w-4 text-text-secondary group-focus:text-primary" />
+      <DropdownMenuItem className="flex items-center gap-4 p-3 rounded-xl cursor-pointer focus:bg-brand/5 focus:text-brand transition-all group outline-none border border-transparent focus:border-brand/10">
+        <div className="h-10 w-10 rounded-xl bg-muted/40 flex items-center justify-center group-focus:bg-white group-focus:shadow-sm transition-all border border-transparent group-focus:border-brand/10">
+          <Layout className="h-5 w-5 text-text-secondary group-focus:text-brand" />
         </div>
         <div className="flex flex-col gap-0.5">
-          <span className="text-[13px] font-bold tracking-tight">Crear con plantilla</span>
-          <span className="text-[10px] text-text-secondary/50 font-medium">Usa un diseño predefinido</span>
+          <span className="text-[14px] font-bold tracking-tight">Crear con plantilla</span>
+          <span className="text-[11px] text-text-secondary/50 font-medium">Usa un diseño predefinido</span>
         </div>
       </DropdownMenuItem>
     </DropdownMenuContent>
@@ -690,33 +707,30 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
               <Button 
                 onClick={() => {
                   const selectedOnes = surveys.filter(s => selectedComparativeIds.includes(s.id));
-                  const currentBaseStillSelected = selectedBaseId && selectedComparativeIds.includes(selectedBaseId);
                   
-                  if (!currentBaseStillSelected) {
-                    const latestId = [...selectedOnes].sort((a, b) => {
-                      const getYear = (item: any) => {
-                        const idMatch = item.id.match(/202\d/);
-                        if (idMatch) return parseInt(idMatch[0]);
-                        const nameMatch = item.name.match(/202\d/);
-                        return nameMatch ? parseInt(nameMatch[0]) : 2024;
-                      };
-                      const yearA = getYear(a);
-                      const yearB = getYear(b);
-                      if (yearA !== yearB) return yearB - yearA;
-                      
-                      const getQuarter = (name: string) => {
-                        const match = name.match(/Q(\d)/);
-                        return match ? parseInt(match[1]) : 0;
-                      };
-                      const qA = getQuarter(a.name);
-                      const qB = getQuarter(b.name);
-                      if (qA !== qB) return qB - qA;
-                      
-                      return b.id.localeCompare(a.id);
-                    })[0]?.id;
+                  // Use robust sorting to find the latest among selected ones
+                  const getScore = (item: any) => {
+                    const yearMatch = item.name.match(/202\d/);
+                    const year = yearMatch ? parseInt(yearMatch[0]) : 0;
                     
-                    setSelectedBaseId(latestId || null);
+                    const quarterMatch = item.name.match(/Q(\d)/);
+                    const quarter = quarterMatch ? parseInt(quarterMatch[1]) : 0;
+                    
+                    const monthMap: Record<string, number> = { 'ene': 1, 'feb': 2, 'mar': 3, 'abr': 4, 'may': 5, 'jun': 6, 'jul': 7, 'ago': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dic': 12 };
+                    const monthStr = item.startDate?.split(' ')[1]?.toLowerCase();
+                    const month = monthMap[monthStr] || 0;
+
+                    return year * 1000 + quarter * 100 + month;
+                  };
+
+                  const latestSelected = [...selectedOnes].sort((a, b) => getScore(b) - getScore(a))[0];
+                  
+                  // Always pre-select the latest one from the current selection if none is selected or if it's not in the selection
+                  const currentBaseStillInSelection = selectedBaseId && selectedComparativeIds.includes(selectedBaseId);
+                  if (!currentBaseStillInSelection) {
+                    setSelectedBaseId(latestSelected?.id || null);
                   }
+
                   setActiveStep(3);
                 }}
                 disabled={selectedComparativeIds.length === 0}

@@ -61,6 +61,7 @@ export function ModalShell({
       <DialogContent 
         className={cn(sizeClasses[size], className)} 
         showCloseButton={showCloseButton}
+        aria-describedby={undefined}
       >
         {(title || description) && (
           <DialogHeader>

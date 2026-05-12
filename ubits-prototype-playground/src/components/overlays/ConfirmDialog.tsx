@@ -76,7 +76,7 @@ export function ConfirmDialog({
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       {trigger && <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>}
-      <AlertDialogContent className={className}>
+      <AlertDialogContent className={className} aria-describedby={undefined}>
         <AlertDialogHeader>
           <AlertDialogTitle className={cn(
             variant === "destructive" && "text-destructive"

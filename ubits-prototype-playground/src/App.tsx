@@ -6,7 +6,7 @@ import { ComparativeDashboard } from "@/screens/ComparativeDashboard";
 import { PlaygroundShellDemo } from "@/screens/PlaygroundShellDemo";
 
 function App() {
-  const [view, setView] = React.useState<'list' | 'comparative'>('comparative');
+  const [view, setView] = React.useState<'list' | 'comparative'>('list');
   const [comparisonContext, setComparisonContext] = React.useState<{
     baseId: string;
     comparativeIds: string[];

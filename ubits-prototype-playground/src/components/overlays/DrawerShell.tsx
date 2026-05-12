@@ -118,6 +118,7 @@ export function DrawerShell({
         side={side} 
         className={cn(sizeClass, className)}
         showCloseButton={showCloseButton}
+        aria-describedby={undefined}
       >
         {(title || description) && (
           <SheetHeader className="border-b bg-muted/20">

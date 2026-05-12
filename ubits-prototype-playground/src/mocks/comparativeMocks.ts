@@ -295,15 +295,23 @@ export const COMPARATIVE_NPS_DATA = {
   ]
 };
 
+// Generic Keys for dynamic mapping:
+// currentScore = latest selected
+// p1 = second latest
+// p2 = third latest
+// p3 = fourth latest
+// p4 = fifth latest
+
 export const COMPARATIVE_DIMENSIONS_DATA = [
   {
     id: "dim-1",
     name: "Liderazgo",
     description: "Confianza y efectividad en el liderazgo",
     currentScore: 82,
-    q3_2024: 68,
-    q2_2024: 66,
-    q1_2024: 64, q4_2023: 60,
+    p1: 68,
+    p2: 66,
+    p3: 64, 
+    p4: 60,
     delta: 14,
     trend: 'up' as const,
     responses: 1240
@@ -313,9 +321,10 @@ export const COMPARATIVE_DIMENSIONS_DATA = [
     name: "Reconocimiento",
     description: "Valoración del trabajo y logros",
     currentScore: 76,
-    q3_2024: 64,
-    q2_2024: 62,
-    q1_2024: 60, q4_2023: 58,
+    p1: 64,
+    p2: 62,
+    p3: 60, 
+    p4: 58,
     delta: 12,
     trend: 'up' as const,
     responses: 1150
@@ -325,9 +334,10 @@ export const COMPARATIVE_DIMENSIONS_DATA = [
     name: "Comunicación",
     description: "Claridad y transparencia interna",
     currentScore: 74,
-    q3_2024: 65,
-    q2_2024: 64,
-    q1_2024: 64, q4_2023: 62,
+    p1: 65,
+    p2: 64,
+    p3: 64, 
+    p4: 62,
     delta: 9,
     trend: 'up' as const,
     responses: 1100
@@ -337,9 +347,10 @@ export const COMPARATIVE_DIMENSIONS_DATA = [
     name: "Cultura",
     description: "Valores y ambiente organizacional",
     currentScore: 79,
-    q3_2024: 71,
-    q2_2024: 70,
-    q1_2024: 69, q4_2023: 68,
+    p1: 71,
+    p2: 70,
+    p3: 69, 
+    p4: 68,
     delta: 8,
     trend: 'up' as const,
     responses: 1180
@@ -349,9 +360,10 @@ export const COMPARATIVE_DIMENSIONS_DATA = [
     name: "Desarrollo",
     description: "Oportunidades de crecimiento",
     currentScore: 72,
-    q3_2024: 75,
-    q2_2024: 75,
-    q1_2024: 74, q4_2023: 72,
+    p1: 75,
+    p2: 75,
+    p3: 74, 
+    p4: 72,
     delta: -3,
     trend: 'down' as const,
     responses: 980
@@ -361,9 +373,10 @@ export const COMPARATIVE_DIMENSIONS_DATA = [
     name: "Bienestar",
     description: "Salud física y mental",
     currentScore: 85,
-    q3_2024: 82,
-    q2_2024: 81,
-    q1_2024: 80, q4_2023: 78,
+    p1: 82,
+    p2: 81,
+    p3: 80, 
+    p4: 78,
     delta: 3,
     trend: 'up' as const,
     responses: 1200
@@ -373,9 +386,10 @@ export const COMPARATIVE_DIMENSIONS_DATA = [
     name: "Carga laboral",
     description: "Distribución de tareas y tiempos",
     currentScore: 68,
-    q3_2024: 70,
-    q2_2024: 71,
-    q1_2024: 72, q4_2023: 74,
+    p1: 70,
+    p2: 71,
+    p3: 72, 
+    p4: 74,
     delta: -2,
     trend: 'down' as const,
     responses: 1050
@@ -385,12 +399,146 @@ export const COMPARATIVE_DIMENSIONS_DATA = [
     name: "Pertenencia",
     description: "Identificación con la empresa",
     currentScore: 90,
-    q3_2024: 88,
-    q2_2024: 86,
-    q1_2024: 85, q4_2023: 82,
+    p1: 88,
+    p2: 86,
+    p3: 85, 
+    p4: 82,
     delta: 2,
     trend: 'up' as const,
     responses: 1300
+  },
+  {
+    id: "dim-9",
+    name: "Innovación",
+    description: "Capacidad de generar nuevas ideas y procesos (Nueva en 2026)",
+    currentScore: 88,
+    p1: null,
+    p2: null,
+    p3: null, 
+    p4: null,
+    delta: null,
+    trend: 'up' as const,
+    responses: 520
+  },
+  {
+    id: "dim-10",
+    name: "Infraestructura",
+    description: "Calidad de las instalaciones y herramientas físicas",
+    currentScore: 75,
+    p1: 72,
+    p2: 70,
+    p3: 68, 
+    p4: 65,
+    delta: 3,
+    trend: 'up' as const,
+    responses: 1100
+  }
+];
+
+export const CULTURA_DIMENSIONS_DATA = [
+  {
+    id: "cdim-1",
+    name: "Valores Vivenciados",
+    description: "Grado en que se practican los valores",
+    currentScore: 88,
+    p1: 82,
+    p2: 80,
+    p3: 78, 
+    p4: 75,
+    delta: 6,
+    trend: 'up' as const,
+    responses: 1100
+  },
+  {
+    id: "cdim-2",
+    name: "Alineación Estratégica",
+    description: "Conexión con el propósito",
+    currentScore: 84,
+    p1: 78,
+    p2: 76,
+    p3: 75, 
+    p4: 72,
+    delta: 6,
+    trend: 'up' as const,
+    responses: 1050
+  },
+  {
+    id: "cdim-3",
+    name: "Innovación y Agilidad",
+    description: "Capacidad de adaptación (Sin historial en Sentimiento)",
+    currentScore: 72,
+    p1: 74,
+    p2: 75,
+    p3: 73, 
+    p4: 70,
+    delta: -2,
+    trend: 'down' as const,
+    responses: 980
+  },
+  {
+    id: "cdim-4",
+    name: "Empoderamiento",
+    description: "Autonomía en la toma de decisiones",
+    currentScore: 79,
+    p1: 72,
+    p2: 70,
+    p3: 68, 
+    p4: 65,
+    delta: 7,
+    trend: 'up' as const,
+    responses: 1020
+  },
+  {
+    id: "cdim-5",
+    name: "Colaboración Transversal",
+    description: "Silo vs Trabajo en equipo",
+    currentScore: 76,
+    p1: 70,
+    p2: 68,
+    p3: 65, 
+    p4: 62,
+    delta: 6,
+    trend: 'up' as const,
+    responses: 950
+  },
+  {
+    id: "cdim-6",
+    name: "Liderazgo Inspirador",
+    description: "Visión y capacidad de guiar de los líderes (Sin historial previo)",
+    currentScore: 85,
+    p1: null,
+    p2: null,
+    p3: null, 
+    p4: null,
+    delta: null,
+    trend: 'up' as const,
+    responses: 480
+  },
+  {
+    id: "cdim-7",
+    name: "Recursos y Herramientas",
+    description: "Disponibilidad de elementos para el trabajo diario (Sin datos actuales)",
+    currentScore: null,
+    p1: 75,
+    p2: 72,
+    p3: 70, 
+    p4: 68,
+    delta: null,
+    trend: 'up' as const,
+    responses: 0
+  },
+  {
+    id: "cdim-8",
+    name: "Bienestar y Equilibrio",
+    description: "Equilibrio vida-trabajo (Solo datos históricos antiguos)",
+    currentScore: null,
+    p1: null,
+    p2: 65,
+    p3: 60, 
+    p4: null,
+    delta: null,
+    trend: 'up' as const,
+    responses: 0
   }
 ];
 
@@ -401,9 +549,9 @@ export const COMPARATIVE_QUESTIONS_DATA = [
     id: "q-1",
     question: "Mi líder directo se preocupa por mi bienestar",
     dimension: "Liderazgo",
-    q4_2024: 85,
-    q3_2024: 72,
-    q2_2024: 70,
+    currentScore: 85,
+    p1: 72,
+    p2: 70,
     trend: [65, 68, 70, 72, 85],
     delta: 13,
     responses: 450
@@ -412,9 +560,9 @@ export const COMPARATIVE_QUESTIONS_DATA = [
     id: "q-2",
     question: "Recibo feedback constructivo regularmente de mi manager",
     dimension: "Liderazgo",
-    q4_2024: 78,
-    q3_2024: 65,
-    q2_2024: 62,
+    currentScore: 78,
+    p1: 65,
+    p2: 62,
     trend: [58, 60, 62, 65, 78],
     delta: 13,
     responses: 445
@@ -423,9 +571,9 @@ export const COMPARATIVE_QUESTIONS_DATA = [
     id: "q-3",
     question: "Tengo las herramientas necesarias para mi trabajo",
     dimension: "Desarrollo",
-    q4_2024: 92,
-    q3_2024: 90,
-    q2_2024: 88,
+    currentScore: 92,
+    p1: 90,
+    p2: 88,
     trend: [85, 87, 88, 90, 92],
     delta: 2,
     responses: 452
@@ -434,9 +582,9 @@ export const COMPARATIVE_QUESTIONS_DATA = [
     id: "q-4",
     question: "Me siento valorado por mis compañeros de equipo",
     dimension: "Cultura",
-    q4_2024: 81,
-    q3_2024: 82,
-    q2_2024: 80,
+    currentScore: 81,
+    p1: 82,
+    p2: 80,
     trend: [78, 79, 80, 82, 81],
     delta: -1,
     responses: 448
@@ -445,9 +593,9 @@ export const COMPARATIVE_QUESTIONS_DATA = [
     id: "q-5",
     question: "Entiendo cómo mi trabajo contribuye a los objetivos",
     dimension: "Comunicación",
-    q4_2024: 88,
-    q3_2024: 85,
-    q2_2024: 84,
+    currentScore: 88,
+    p1: 85,
+    p2: 84,
     trend: [80, 82, 84, 85, 88],
     delta: 3,
     responses: 450
@@ -456,89 +604,296 @@ export const COMPARATIVE_QUESTIONS_DATA = [
     id: "q-6",
     question: "Existe un ambiente de respeto y colaboración",
     dimension: "Cultura",
-    q4_2024: 76,
-    q3_2024: 70,
-    q2_2024: 68,
+    currentScore: 76,
+    p1: 70,
+    p2: 68,
     trend: [60, 65, 68, 70, 76],
     delta: 6,
     responses: 430
+  }
+];
+
+export const CULTURA_QUESTIONS_DATA = [
+  {
+    id: "cq-1",
+    question: "Los líderes de UBITS actúan de acuerdo con nuestros valores",
+    dimension: "Valores Vivenciados",
+    currentScore: 90,
+    p1: 82,
+    p2: 78,
+    trend: [70, 75, 78, 82, 90],
+    delta: 8,
+    responses: 1100
   },
   {
-    id: "q-7",
-    question: "Mi carga de trabajo es razonable la mayor parte del tiempo",
-    dimension: "Bienestar",
-    q4_2024: 65,
-    q3_2024: 68,
-    q2_2024: 70,
-    trend: [75, 72, 70, 68, 65],
-    delta: -3,
-    responses: 420
-  },
-  {
-    id: "q-8",
-    question: "Siento que puedo ser yo mismo en mi lugar de trabajo",
-    dimension: "Pertenencia",
-    q4_2024: 84,
-    q3_2024: 80,
-    q2_2024: 78,
-    trend: [70, 75, 78, 80, 84],
-    delta: 4,
-    responses: 440
-  },
-  {
-    id: "q-9",
-    question: "Las decisiones se comunican de manera transparente",
-    dimension: "Comunicación",
-    q4_2024: 72,
-    q3_2024: 65,
-    q2_2024: 60,
-    trend: [50, 55, 60, 65, 72],
+    id: "cq-2",
+    question: "Me siento inspirado por el propósito de la compañía",
+    dimension: "Alineación Estratégica",
+    currentScore: 85,
+    p1: 78,
+    p2: 75,
+    trend: [65, 70, 75, 78, 85],
     delta: 7,
-    responses: 410
+    responses: 1050
   },
   {
-    id: "q-10",
-    question: "Estoy satisfecho con las oportunidades de crecimiento",
-    dimension: "Desarrollo",
-    q4_2024: 68,
-    q3_2024: 70,
-    q2_2024: 72,
-    trend: [78, 75, 72, 70, 68],
-    delta: -2,
-    responses: 405
+    id: "cq-3",
+    question: "En mi equipo se fomenta la experimentación y el aprendizaje",
+    dimension: "Innovación y Agilidad",
+    currentScore: 75,
+    p1: 78,
+    p2: 76,
+    trend: [70, 72, 76, 78, 75],
+    delta: -3,
+    responses: 980
   },
   {
-    id: "q-11",
-    question: "Mi manager apoya mi desarrollo profesional",
-    dimension: "Liderazgo",
-    q4_2024: 82,
-    q3_2024: 78,
-    q2_2024: 75,
-    trend: [70, 72, 75, 78, 82],
+    id: "cq-4",
+    question: "Siento que tengo autonomía para tomar decisiones en mi rol",
+    dimension: "Empoderamiento",
+    currentScore: 82,
+    p1: 74,
+    p2: 70,
+    trend: [60, 65, 70, 74, 82],
+    delta: 8,
+    responses: 1020
+  },
+  {
+    id: "cq-5",
+    question: "Los líderes tienen una visión clara del futuro",
+    dimension: "Liderazgo Inspirador",
+    currentScore: 85,
+    p1: null,
+    p2: null,
+    trend: [],
+    delta: null,
+    responses: 480
+  },
+  {
+    id: "cq-6",
+    question: "Tengo los recursos necesarios para hacer mi trabajo",
+    dimension: "Recursos y Herramientas",
+    currentScore: null,
+    p1: 75,
+    p2: 72,
+    trend: [68, 70, 72, 75],
+    delta: null,
+    responses: 0
+  },
+  {
+    id: "cq-7",
+    question: "La empresa se preocupa por mi bienestar personal",
+    dimension: "Bienestar y Equilibrio",
+    currentScore: null,
+    p1: null,
+    p2: 65,
+    trend: [60, 65],
+    delta: null,
+    responses: 0
+  }
+];
+
+export const CULTURA_FAVORABILITY_DATA = {
+  mainMetric: {
+    id: 'cu-fav-2026',
+    label: 'Favorabilidad',
+    value: 86.5,
+    previousValue: 84.8,
+    delta: 1.7,
+    deltaPercentage: 2.0,
+    trend: 'up' as const,
+    description: 'Cultura 2026 (BASE)',
+    totalResponses: 550
+  },
+  distributionByPeriod: [
+    {
+      period: 'Cultura 2026 (BASE)',
+      total: 550,
+      segments: [
+        { id: 'cu-fav-1', label: 'Favorable', value: 86.5, percentage: 86.5, tone: 'positive' as const },
+        { id: 'cu-neu-1', label: 'Neutral', value: 8.5, percentage: 8.5, tone: 'neutral' as const },
+        { id: 'cu-des-1', label: 'Desfavorable', value: 5.0, percentage: 5.0, tone: 'negative' as const },
+      ]
+    },
+    {
+      period: 'Cultura 2025',
+      total: 530,
+      segments: [
+        { id: 'cu-fav-2', label: 'Favorable', value: 84.8, percentage: 84.8, tone: 'positive' as const },
+        { id: 'cu-neu-2', label: 'Neutral', value: 10.2, percentage: 10.2, tone: 'neutral' as const },
+        { id: 'cu-des-2', label: 'Desfavorable', value: 5.0, percentage: 5.0, tone: 'negative' as const },
+      ]
+    },
+    {
+      period: 'Cultura 2024',
+      total: 510,
+      segments: [
+        { id: 'cu-fav-3', label: 'Favorable', value: 82.0, percentage: 82.0, tone: 'positive' as const },
+        { id: 'cu-neu-3', label: 'Neutral', value: 12.0, percentage: 12.0, tone: 'neutral' as const },
+        { id: 'cu-des-3', label: 'Desfavorable', value: 6.0, percentage: 6.0, tone: 'negative' as const },
+      ]
+    }
+  ],
+  trendData: {
+    id: 'cu-fav-trend',
+    label: 'Evolución de Favorabilidad Cultura',
+    data: [
+      { label: '2024', value: 82.0, total: 510 },
+      { label: '2025', value: 84.8, total: 530 },
+      { label: '2026', value: 86.5, total: 550 },
+    ],
+    unit: '%'
+  },
+  comparisons: [
+    { label: '2026 (BASE)', value: 86.5, isBase: true },
+    { label: '2025', value: 84.8, delta: 1.7, trend: 'up' as const },
+    { label: '2024', value: 82.0, delta: 4.5, trend: 'up' as const },
+  ]
+};
+
+export const CULTURA_PARTICIPATION_DATA = {
+  mainMetric: {
+    id: 'cu-part-2026',
+    label: 'PARTICIPACIÓN',
+    value: 94.5,
+    previousValue: 92.5,
+    delta: 2.0,
+    deltaPercentage: 2.1,
+    trend: 'up' as const,
+    description: 'Cultura 2026 (BASE)',
+    totalResponses: 550
+  },
+  distributionByPeriod: [
+    {
+      period: 'Cultura 2026 (BASE)',
+      total: 550,
+      segments: [
+        { id: 'cu-part-res-1', label: 'Respondió', value: 94.5, percentage: 94.5, tone: 'positive' as const },
+        { id: 'cu-part-pen-1', label: 'Pendiente', value: 5.5, percentage: 5.5, tone: 'neutral' as const },
+      ]
+    },
+    {
+      period: 'Cultura 2025',
+      total: 530,
+      segments: [
+        { id: 'cu-part-res-2', label: 'Respondió', value: 92.5, percentage: 92.5, tone: 'positive' as const },
+        { id: 'cu-part-pen-2', label: 'Pendiente', value: 7.5, percentage: 7.5, tone: 'neutral' as const },
+      ]
+    }
+  ],
+  trendData: {
+    id: 'cu-part-trend',
+    label: 'Evolución de Participación Cultura',
+    data: [
+      { label: '2024', value: 90.5, total: 510 },
+      { label: '2025', value: 92.5, total: 530 },
+      { label: '2026', value: 94.5, total: 550 },
+    ],
+    unit: '%'
+  },
+  comparisons: [
+    { label: '2026 (BASE)', value: 94.5, isBase: true },
+    { label: '2025', value: 92.5, delta: 2.0, trend: 'up' as const },
+    { label: '2024', value: 90.5, delta: 4.0, trend: 'up' as const },
+  ]
+};
+
+export const CULTURA_NPS_DATA = {
+  mainMetric: {
+    id: 'cu-nps-2026',
+    label: 'NPS',
+    value: 58,
+    previousValue: 54,
     delta: 4,
-    responses: 440
+    trend: 'up' as const,
+    description: 'Cultura 2026 (BASE)',
+    totalResponses: 550
+  },
+  distributionByPeriod: [
+    {
+      period: 'Cultura 2026 (BASE)',
+      total: 550,
+      segments: [
+        { id: 'cu-prom-1', label: 'PROM.', value: 68, percentage: 68, tone: 'positive' as const },
+        { id: 'cu-neu-1', label: 'NEUT.', value: 22, percentage: 22, tone: 'neutral' as const },
+        { id: 'cu-det-1', label: 'DET.', value: 10, percentage: 10, tone: 'negative' as const },
+      ]
+    },
+    {
+      period: 'Cultura 2025',
+      total: 530,
+      segments: [
+        { id: 'cu-prom-2', label: 'PROM.', value: 65, percentage: 65, tone: 'positive' as const },
+        { id: 'cu-neu-2', label: 'NEUT.', value: 24, percentage: 24, tone: 'neutral' as const },
+        { id: 'cu-det-2', label: 'DET.', value: 11, percentage: 11, tone: 'negative' as const },
+      ]
+    }
+  ],
+  trendData: {
+    id: 'cu-nps-trend',
+    label: 'Evolución de NPS Cultura',
+    data: [
+      { label: '2024', value: 50, total: 510 },
+      { label: '2025', value: 54, total: 530 },
+      { label: '2026', value: 58, total: 550 },
+    ],
+    unit: ''
+  },
+  comparisons: [
+    { label: '2026 (BASE)', value: 58, isBase: true },
+    { label: '2025', value: 54, delta: 4, trend: 'up' as const },
+    { label: '2024', value: 50, delta: 8, trend: 'up' as const },
+  ]
+};
+
+export const CULTURA_SENTIMENT_DATA = [
+  {
+    id: "csent-1",
+    dimension: "Valores Vivenciados",
+    currentScore: { positive: 75, neutral: 15, negative: 10, total: 400 },
+    p1: { positive: 70, neutral: 18, negative: 12, total: 380 },
+    p2: { positive: 65, neutral: 20, negative: 15, total: 350 },
+    delta: 5
   },
   {
-    id: "q-12",
-    question: "La empresa se preocupa por la salud mental",
-    dimension: "Bienestar",
-    q4_2024: 79,
-    q3_2024: 75,
-    q2_2024: 72,
-    trend: [65, 68, 72, 75, 79],
-    delta: 4,
-    responses: 435
+    id: "csent-2",
+    dimension: "Alineación Estratégica",
+    currentScore: { positive: 70, neutral: 20, negative: 10, total: 380 },
+    p1: { positive: 65, neutral: 22, negative: 13, total: 360 },
+    p2: { positive: 60, neutral: 25, negative: 15, total: 340 },
+    delta: 5
   },
   {
-    id: "q-13",
-    question: "Recomendaría trabajar aquí a mis amigos",
-    dimension: "Pertenencia",
-    q4_2024: 90,
-    q3_2024: 85,
-    q2_2024: 82,
-    trend: [75, 80, 82, 85, 90],
-    delta: 5,
-    responses: 450
+    id: "csent-3",
+    dimension: "Innovación y Agilidad",
+    currentScore: { positive: 45, neutral: 35, negative: 20, total: 320 },
+    p1: null,
+    p2: null,
+    delta: null
+  },
+  {
+    id: "csent-4",
+    dimension: "Liderazgo Inspirador",
+    currentScore: { positive: 88, neutral: 8, negative: 4, total: 450 },
+    p1: null,
+    p2: null,
+    delta: null
+  },
+  {
+    id: "csent-5",
+    dimension: "Recursos y Herramientas",
+    currentScore: null,
+    p1: { positive: 60, neutral: 30, negative: 10, total: 400 },
+    p2: null,
+    delta: null
+  },
+  {
+    id: "csent-6",
+    dimension: "Bienestar y Equilibrio",
+    currentScore: null,
+    p1: null,
+    p2: { positive: 50, neutral: 30, negative: 20, total: 200 },
+    delta: null
   }
 ];
 
@@ -704,6 +1059,49 @@ export const COMPARATIVE_COMMENTS_DETAIL = [
   }
 ];
 
+export const CULTURA_COMMENTS_DETAIL = [
+  {
+    id: "cc-1",
+    text: "Los valores de UBITS no son solo palabras en una pared, realmente los vivimos en el día a día.",
+    dimension: "Valores Vivenciados",
+    sentiment: "positive",
+    date: "15 Mar 2026",
+    demographics: { area: "RRHH", rol: "Manager", pais: "Colombia" }
+  },
+  {
+    id: "cc-2",
+    text: "Siento que el propósito de democratizar el aprendizaje nos une a todos como equipo.",
+    dimension: "Alineación Estratégica",
+    sentiment: "positive",
+    date: "10 Mar 2026",
+    demographics: { area: "Producto", rol: "Senior Manager", pais: "México" }
+  },
+  {
+    id: "cc-3",
+    text: "La agilidad a veces se confunde con desorden; necesitamos procesos más robustos para innovar.",
+    dimension: "Innovación y Agilidad",
+    sentiment: "neutral",
+    date: "05 Mar 2026",
+    demographics: { area: "Tecnología", rol: "Senior Dev", pais: "Colombia" }
+  },
+  {
+    id: "cc-4",
+    text: "Me siento empoderado para tomar decisiones, pero a veces falta feedback sobre el impacto.",
+    dimension: "Empoderamiento",
+    sentiment: "positive",
+    date: "01 Mar 2026",
+    demographics: { area: "Ventas", rol: "Individual Contributor", pais: "Chile" }
+  },
+  {
+    id: "cc-5",
+    text: "La transparencia en la comunicación de resultados financieros nos da mucha seguridad.",
+    dimension: "Alineación Estratégica",
+    sentiment: "positive",
+    date: "28 Feb 2026",
+    demographics: { area: "Finanzas", rol: "Director", pais: "Colombia" }
+  }
+];
+
 export const COMPARATIVE_AI_INSIGHTS = {
   summary: "El análisis comparativo de 5 períodos reveló tendencias positivas en engagement y preocupaciones en carga de trabajo. La satisfacción general ha aumentado 8.2% impulsada por mejoras en liderazgo y cultura.",
 
@@ -745,7 +1143,69 @@ export const COMPARATIVE_AI_INSIGHTS = {
       impact: "Aumento de 2-3% esperado en satisfacción en próximos trimestres"
     }
   ],
+  topKeywords: {
+    positive: [
+      { word: 'Feedback', count: 42 },
+      { word: 'Cercanía', count: 35 },
+      { word: 'Comunicación', count: 28 },
+      { word: 'Procesos', count: 24 },
+      { word: 'Confianza', count: 18 }
+    ],
+    negative: [
+      { word: 'Carga', count: 56 },
+      { word: 'Estrés', count: 48 },
+      { word: 'Salarios', count: 32 },
+      { word: 'Reconocimiento', count: 25 },
+      { word: 'Burocracia', count: 20 }
+    ],
+    neutral: [
+      { word: 'Estabilidad', count: 38 },
+      { word: 'Seguimiento', count: 30 },
+      { word: 'Herramientas', count: 25 },
+      { word: 'Comunicación', count: 22 },
+      { word: 'Horarios', count: 18 }
+    ]
+  },
+  recurrentThemes: {
+    positive: [
+      { text: 'Acompañamiento del líder', count: 12, trend: 'up', relevance: 0.95, recurrent: true, desc: 'Percepción alta de soporte directo' },
+      { text: 'Plan de carrera claro', count: 8, trend: 'stable', relevance: 0.82, recurrent: true, desc: 'Visibilidad de crecimiento interno' }
+    ],
+    negative: [
+      { text: 'Exceso de reuniones', count: 18, trend: 'up', relevance: 0.98, recurrent: true, desc: 'Impacto directo en la productividad' },
+      { text: 'Falta de feedback', count: 14, trend: 'down', relevance: 0.88, recurrent: true, desc: 'Necesidad de mayor retroalimentación' }
+    ],
+    neutral: [
+      { text: 'Procesos estables', count: 15, trend: 'stable', relevance: 0.90, recurrent: true, desc: 'Consistencia operativa detectada' },
+      { text: 'Herramientas de trabajo', count: 10, trend: 'up', relevance: 0.85, recurrent: true, desc: 'Adopción de nuevas plataformas' }
+    ]
+  },
+  featuredInsights: {
+    positive: '«El liderazgo actual se percibe como el motor principal del compromiso, destacando la empatía y la claridad en la dirección estratégica como factores clave de éxito.»',
+    negative: '«Se identifica una correlación crítica entre la carga laboral y la rotación potencial. El equipo manifiesta fatiga por procesos burocráticos que dilatan las entregas.»',
+    neutral: '«La estabilidad es la nota dominante, sugiriendo un periodo de consolidación operativa donde el foco está en la optimización de las herramientas actuales.»'
+  },
+  recurrentComments: {
+    positive: [
+      { title: 'CLARIDAD EN OBJETIVOS', total: 36, text: 'Existe una mejora notable en cómo los líderes definen los OKRs.', confidence: '92%' },
+      { title: 'SOPORTE DEL LÍDER', total: 24, text: 'Los colaboradores valoran la cercanía y el apoyo constante.', confidence: '88%' }
+    ],
+    negative: [
+      { title: 'SOBRECARGA LABORAL', total: 42, text: 'Se reporta una fatiga acumulada por jornadas extensas.', confidence: '95%' },
+      { title: 'LENTITUD EN PROCESOS', total: 28, text: 'La burocracia interna afecta la velocidad de ejecución.', confidence: '84%' }
+    ],
+    neutral: [
+      { title: 'ESTABILIDAD OPERATIVA', total: 30, text: 'Los procesos se mantienen estables pero sin grandes innovaciones.', confidence: '85%' }
+    ]
+  },
 
+  sentiment: {
+    currentScore: { positive: 82, neutral: 12, negative: 6, total: 580 },
+    p1: { positive: 74, neutral: 18, negative: 8, total: 565 },
+    p2: { positive: 70, neutral: 20, negative: 10, total: 550 },
+    p3: { positive: 68, neutral: 22, negative: 10, total: 540 },
+    p4: { positive: 65, neutral: 25, negative: 10, total: 535 },
+  },
   predictions: {
     summary: "Basado en análisis de series temporales y machine learning",
     scenarios: [
@@ -776,6 +1236,108 @@ export const COMPARATIVE_AI_INSIGHTS = {
         predicted: 90.2,
         probabilityGrowth: 65,
         probabilityDecline: 20,
+        probabilityStable: 15
+      }
+    ]
+  }
+};
+
+export const CULTURA_AI_INSIGHTS = {
+  summary: "La cultura de UBITS se mantiene sólida con un alto nivel de alineación al propósito. Se observa una mejora significativa en la vivencia de valores en comparación con el año anterior.",
+
+  highImpactFindings: [
+    {
+      id: "cu-insight-1",
+      title: "Fuerte Alineación Estratégica",
+      description: "El 85% de los colaboradores se siente inspirado por el propósito corporativo.",
+      type: "insight",
+      confidence: "high",
+      evidence: "Cultura: Puntaje de 85 en Alineación Estratégica",
+      impact: "Mayor compromiso a largo plazo y coherencia en la ejecución"
+    },
+    {
+      id: "cu-insight-2",
+      title: "Valores Vivenciados en aumento",
+      description: "Mejora de 8 puntos en la percepción de que los líderes actúan según los valores.",
+      type: "insight",
+      confidence: "high",
+      evidence: "Valores Vivenciados: 82% (2025) → 90% (2026)",
+      impact: "Fortalecimiento de la confianza y el liderazgo ejemplar"
+    },
+    {
+      id: "cu-insight-3",
+      title: "Barrera: Exceso de perfeccionismo",
+      description: "La agilidad se ve limitada por una baja tolerancia al error en algunos equipos.",
+      type: "risk",
+      confidence: "medium",
+      evidence: "Innovación y Agilidad: Satisfacción del 75%",
+      impact: "Reducción en la velocidad de experimentación"
+    }
+  ],
+  topKeywords: {
+    positive: [
+      { word: 'Propósito', count: 52 },
+      { word: 'Valores', count: 48 },
+      { word: 'Alineación', count: 45 },
+      { word: 'Orgullo', count: 38 },
+      { word: 'Identidad', count: 32 }
+    ],
+    negative: [
+      { word: 'Lentitud', count: 28 },
+      { word: 'Error', count: 24 },
+      { word: 'Miedo', count: 22 },
+      { word: 'Silencio', count: 18 },
+      { word: 'Aislamiento', count: 15 }
+    ],
+    neutral: [
+      { word: 'Continuidad', count: 35 },
+      { word: 'Tradición', count: 28 },
+      { word: 'Manuales', count: 22 },
+      { word: 'Normas', count: 18 },
+      { word: 'Flujos', count: 15 }
+    ]
+  },
+  recurrentThemes: {
+    positive: [
+      { text: 'Conexión con el Propósito', count: 25, trend: 'up', relevance: 0.98, recurrent: true, desc: 'Alta identificación con la misión' },
+      { text: 'Vivencia de Valores', count: 18, trend: 'up', relevance: 0.92, recurrent: true, desc: 'Los líderes son ejemplo de cultura' }
+    ],
+    negative: [
+      { text: 'Miedo al error', count: 15, trend: 'stable', relevance: 0.85, recurrent: true, desc: 'Barrera para la innovación abierta' },
+      { text: 'Silos culturales', count: 10, trend: 'up', relevance: 0.78, recurrent: false, desc: 'Diferencias marcadas entre áreas' }
+    ],
+    neutral: [
+      { text: 'Rituales corporativos', count: 20, trend: 'stable', relevance: 0.88, recurrent: true, desc: 'Participación constante en eventos' },
+      { text: 'Código de ética', count: 12, trend: 'stable', relevance: 0.82, recurrent: false, desc: 'Conocimiento general de normas' }
+    ]
+  },
+  featuredInsights: {
+    positive: '«La cultura de UBITS se ha convertido en una ventaja competitiva, donde la alineación al propósito impulsa un compromiso extraordinario.»',
+    negative: '«Detectamos una oportunidad crítica en la seguridad psicológica; la aversión al riesgo está frenando la capacidad de aprendizaje del equipo.»',
+    neutral: '«La cultura organizacional es percibida como estable y protectora, brindando un marco de seguridad claro para la ejecución diaria.»'
+  },
+  recurrentComments: {
+    positive: [
+      { title: 'ORGULLO DE PERTENENCIA', total: 45, text: 'Me siento orgulloso de trabajar en una empresa con valores claros.', confidence: '98%', frequency: 'Alta frecuencia', periods: ['Q4', 'Q3', 'Q2'], detected: 'Detectado en 15 áreas' },
+      { title: 'COHERENCIA LIDERAZGO', total: 32, text: 'Mis líderes actúan de acuerdo a lo que la empresa predica.', confidence: '94%', frequency: 'Tendencia estable', periods: ['Q4', 'Q3'], detected: 'Detectado en 12 áreas' }
+    ],
+    negative: [
+      { title: 'AVERSIÓN AL RIESGO', total: 25, text: 'A veces preferimos no proponer para no equivocarnos.', confidence: '82%', frequency: 'Riesgo emergente', periods: ['Q4'], detected: 'Detectado en 8 áreas' },
+      { title: 'DESCONEXIÓN INTER-ÁREAS', total: 18, text: 'Cada área tiene su propia "cultura" y cuesta colaborar.', confidence: '78%', frequency: 'Persistente', periods: ['Q4', 'Q3', 'Q2', 'Q1'], detected: 'Detectado en 10 áreas' }
+    ],
+    neutral: [
+      { title: 'CONOCIMIENTO DE NORMAS', total: 40, text: 'Tengo claro qué se espera de mí según el manual de cultura.', confidence: '90%', frequency: 'Consistencia alta', periods: ['Q4', 'Q3', 'Q2', 'Q1'], detected: 'Detectado en 20 áreas' }
+    ]
+  },
+
+  predictions: {
+    summary: "Proyecciones de madurez cultural",
+    scenarios: [
+      {
+        label: "2027",
+        predicted: 92.5,
+        probabilityGrowth: 80,
+        probabilityDecline: 5,
         probabilityStable: 15
       }
     ]

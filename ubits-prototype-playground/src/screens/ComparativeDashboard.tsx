@@ -507,7 +507,6 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     const id = activeTab === 'dimensiones'
       ? (dimensionsView === 'heatmap' ? 'dimensionesHeatmap' : 'dimensionesTable')
       : activeTab as TabId;
-    console.log('[DEBUG] visibleTabId calculated:', id, 'activeTab:', activeTab, 'dimensionsView:', dimensionsView);
     return id;
   }, [activeTab, dimensionsView]);
 

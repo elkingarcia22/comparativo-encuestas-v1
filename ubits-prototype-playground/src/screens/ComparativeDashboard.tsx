@@ -3123,7 +3123,13 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                             </>
                                           )}
                                         </div>
-                                        <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">n={col.responses}</span>
+                                        {(() => {
+                                          const isPrivado = type === 'Cultura' && (dim.id + col.id).length % 12 === 0 && (dim as any)[col.dimKey] !== undefined;
+                                          const shouldShowZero = hasNoResponses || (score === null && !isPrivado);
+                                          return (
+                                            <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">n={shouldShowZero ? 0 : col.responses}</span>
+                                          );
+                                        })()}
                                       </div>
                                     </TableCell>
                                   );
@@ -3550,7 +3556,13 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                             </>
                                           )}
                                         </div>
-                                        <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">n={col.responses}</span>
+                                        {(() => {
+                                          const isPrivado = type === 'Cultura' && (item.id + col.id).length % 14 === 0 && (item as any)[col.quesKey] !== undefined;
+                                          const shouldShowZero = hasNoResponses || (score === null && !isPrivado);
+                                          return (
+                                            <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">n={shouldShowZero ? 0 : col.responses}</span>
+                                          );
+                                        })()}
                                       </div>
                                     </TableCell>
                                   );
@@ -3827,7 +3839,11 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                           )}
                                         </div>
                                         <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">
-                                          {data !== null ? `n=${data.total}` : 'n=0'}
+                                          {(() => {
+                                            const isPrivado = type === 'Cultura' && (item.id + col.id).length % 16 === 0 && (item as any)[col.sentKey] !== undefined;
+                                            const shouldShowZero = hasNoResponses || (data === null && !isPrivado);
+                                            return `n=${shouldShowZero ? 0 : (data !== null ? data.total : 0)}`;
+                                          })()}
                                         </span>
                                       </div>
                                     </TableCell>

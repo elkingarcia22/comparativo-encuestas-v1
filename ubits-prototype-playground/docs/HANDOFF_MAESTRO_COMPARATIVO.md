@@ -52,23 +52,30 @@ La implementación en `/src/` es el referente técnico:
 | **Delta Pill** | Mejora | Píldora Verde | "Mejora significativa respecto a la encuesta base." |
 | **Delta Pill** | Caída | Píldora Roja | "Retroceso respecto a la encuesta base." |
 | **Heatmap** | Sin respuestas | Celda Gris | "Puntaje promedio del segmento [X] en la dimensión [Y]." |
+| **Gráfico** | Sin datos | Vacío | "Sin datos suficientes para graficar." |
 | **N/A en Tablas** | Faltante | "N/A" | "Esta dimensión no fue evaluada en esta encuesta específica." |
 
 ## 8. Rutas de Usuario Detalladas
 ### RUTA 1: Filtros (Escenario "Juan Pérez")
 - El usuario selecciona un líder en el Header.
-- **Hover en Header (i)**: *"Los filtros aplicados afectan a todos los componentes del dashboard."*
+- **Hover en Header (i)**: *"Los filtros aplicados afectan a todos los componentes del dashboard (Cards, Gráficos y Heatmap)."*
+- **Hovers de KPI Cards (Info)**:
+  - **Favorabilidad**: *"Suma de respuestas positivas (4 y 5) sobre el total de respuestas."*
+  - **Participación**: *"Colaboradores que respondieron vs. Colaboradores invitados."*
+  - **NPS**: *"Net Promoter Score: % Promotores (9-10) - % Detractores (0-6)."*
 - Si el líder no tiene respuestas: Tooltip: *"No se encontraron registros para este segmento en este proceso."*
 
 ### RUTA 2: Análisis IA y Comentarios
-- **Tooltip Icono IA**: *"Análisis generado automáticamente por inteligencia artificial."*
+- **Tooltip Icono IA**: *"Este análisis resume automáticamente los comentarios de los colaboradores mediante inteligencia artificial."*
 - **Hovers de Sentimiento**:
-  - Positivo: *"Comentarios que expresan satisfacción."*
-  - Negativo: *"Comentarios con áreas de mejora o descontento."*
+  - **Positivo**: *"Comentarios que expresan satisfacción o aprobación."*
+  - **Neutro**: *"Comentarios informativos o sin una carga emocional clara."*
+  - **Negativo**: *"Comentarios que expresan descontento o áreas de mejora."*
 
 ### RUTA 3: Acciones de Header
 - **Compartir (🔗)**: Tooltip: *"Copiar enlace del comparativo con filtros actuales."* -> Toast: *"Enlace copiado al portapapeles."*
 - **Descargar (📥)**: Tooltip: *"Exportar resultados a Excel o PDF."* -> Toast: *"La descarga del reporte ha iniciado."*
+- **Información (💡)**: Tooltip: *"Guía rápida sobre cómo interpretar los deltas y colores del comparativo."*
 
 ## 9. Criterios de Aceptación
 - Bloqueo de navegación si no se seleccionan al menos 2 encuestas.

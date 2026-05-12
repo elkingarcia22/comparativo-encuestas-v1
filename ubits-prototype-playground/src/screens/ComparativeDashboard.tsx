@@ -562,13 +562,6 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       .filter(([key, values]) => values && values.length > 0)
       .map(([key, values]) => ({ category: key, values }));
 
-    // DEBUG: Log what's happening
-    if (visibleTabId === 'dimensionesTable') {
-      console.log('[DEBUG] visibleTabId:', visibleTabId);
-      console.log('[DEBUG] tabFiltersData:', tabFiltersData);
-      console.log('[DEBUG] activeDemographics:', activeDemographics);
-    }
-
     // Apply demographic filtering
     if (activeDemographics.length > 0) {
       result = result.map(dim => {

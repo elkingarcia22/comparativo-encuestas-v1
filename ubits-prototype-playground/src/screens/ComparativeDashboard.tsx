@@ -3126,8 +3126,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                         {(() => {
                                           const isPrivado = type === 'Cultura' && (dim.id + col.id).length % 12 === 0 && (dim as any)[col.dimKey] !== undefined;
                                           const shouldShowZero = hasNoResponses || (score === null && !isPrivado);
+                                          const lowResponseCount = ((dim.id + col.id).charCodeAt(0) || 5) % 9 + 1;
                                           return (
-                                            <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">n={shouldShowZero ? 0 : col.responses}</span>
+                                            <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">n={shouldShowZero ? 0 : (isPrivado ? lowResponseCount : col.responses)}</span>
                                           );
                                         })()}
                                       </div>
@@ -3559,8 +3560,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                         {(() => {
                                           const isPrivado = type === 'Cultura' && (item.id + col.id).length % 14 === 0 && (item as any)[col.quesKey] !== undefined;
                                           const shouldShowZero = hasNoResponses || (score === null && !isPrivado);
+                                          const lowResponseCount = ((item.id + col.id).charCodeAt(0) || 5) % 9 + 1;
                                           return (
-                                            <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">n={shouldShowZero ? 0 : col.responses}</span>
+                                            <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">n={shouldShowZero ? 0 : (isPrivado ? lowResponseCount : col.responses)}</span>
                                           );
                                         })()}
                                       </div>
@@ -3842,7 +3844,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                           {(() => {
                                             const isPrivado = type === 'Cultura' && (item.id + col.id).length % 16 === 0 && (item as any)[col.sentKey] !== undefined;
                                             const shouldShowZero = hasNoResponses || (data === null && !isPrivado);
-                                            return `n=${shouldShowZero ? 0 : (data !== null ? data.total : 0)}`;
+                                            const lowResponseCount = ((item.id + col.id).charCodeAt(0) || 5) % 9 + 1;
+                                            const displayCount = shouldShowZero ? 0 : (isPrivado ? lowResponseCount : (data !== null ? data.total : 0));
+                                            return `n=${displayCount}`;
                                           })()}
                                         </span>
                                       </div>

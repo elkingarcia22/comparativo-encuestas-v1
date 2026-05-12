@@ -34,6 +34,7 @@ import {
   Link,
   Minus,
   Copy,
+  Lock,
 } from "lucide-react";
 import {
   Table,
@@ -827,40 +828,44 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     // 3. Build the data matrix
     const currentData = visibleDimensions.map((dimBase) => {
       const segmentsData: Record<string, any> = {};
+      
+      // Heuristic for "new" dimension: check if it lacks historical survey keys
+      // In a real app, this would be determined by the data source
+      const isNewDimension = (dimBase as any).p1 === null && (dimBase as any).p2 === null;
 
-      segments.forEach((seg) => {
-        const filtersStr = JSON.stringify(tabFilters.dimensionesHeatmap.demographics) +
-          JSON.stringify(activeHeatmapFilters) +
-          heatmapSegment +
-          dimBase.name +
-          seg.label;
+      if (!isNewDimension) {
+        segments.forEach((seg) => {
+          const filtersStr = JSON.stringify(tabFilters.dimensionesHeatmap.demographics) +
+            JSON.stringify(activeHeatmapFilters) +
+            heatmapSegment +
+            dimBase.name +
+            seg.label;
 
-        let hash = 0;
-        for (let i = 0; i < filtersStr.length; i++) {
-          hash = ((hash << 5) - hash) + filtersStr.charCodeAt(i);
-          hash |= 0;
-        }
-        hash = Math.abs(hash);
+          let hash = 0;
+          for (let i = 0; i < filtersStr.length; i++) {
+            hash = ((hash << 5) - hash) + filtersStr.charCodeAt(i);
+            hash |= 0;
+          }
+          hash = Math.abs(hash);
 
-        let delta = (hash % 31) - 15; // -15 to +15
-        let n = 20 + (hash % 200);
+          let delta = (hash % 31) - 15; // -15 to +15
+          let n = 20 + (hash % 200);
 
-        if (totalFilters > 0 || hasHeatmapFilters) {
-          const shiftFactor = (totalFilters + activeHeatmapFilters.length) * 3;
-          delta = delta + (hash % 11) - 5 + (shiftFactor % 7);
-          n = Math.max(5, Math.floor(n * (0.4 + (hash % 40) / 100)));
-        }
+          if (totalFilters > 0 || hasHeatmapFilters) {
+            const shiftFactor = (totalFilters + activeHeatmapFilters.length) * 3;
+            delta = delta + (hash % 11) - 5 + (shiftFactor % 7);
+          }
 
-        segmentsData[seg.id] = {
-          delta,
-          n,
-          status: undefined
-        };
-      });
+          segmentsData[seg.id] = {
+            delta,
+            n,
+            status: (type === 'Cultura' && hash % 10 === 0) ? 'private' : 'active'
+          };
+        });
+      }
 
       return {
-        id: dimBase.id,
-        name: dimBase.name,
+        ...dimBase,
         segments: segmentsData
       };
     });
@@ -894,7 +899,8 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     }
 
     // Adjust comparisons (Summary Footer)
-    if (cloned.comparisons) {
+    // Skip for Cultura: comparisons are rebuilt from newDistribution in getProcessedMetricData
+    if (cloned.comparisons && type !== 'Cultura') {
       cloned.comparisons = cloned.comparisons.map((c: any, idx: number) => {
         const shift = factor + (idx * 1.5);
         const newValue = Math.round(Math.max(minVal, Math.min(100, c.value - shift)));
@@ -952,8 +958,36 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       });
     }
 
+    // ADDED: Logic for "No responses" in Cultura to simulate specific demographic cases (e.g. Leader Juan Perez with 0 responses)
+    if (type === 'Cultura' && filterCount > 0) {
+      // For demonstration, we'll make the second survey (index 1) have no responses
+      if (cloned.distributionByPeriod && cloned.distributionByPeriod.length > 1) {
+        const targetIdx = 1; // Simulation: second survey has no data for this specific filter
+        cloned.distributionByPeriod[targetIdx] = {
+          ...cloned.distributionByPeriod[targetIdx],
+          status: 'no_responses',
+          total: 0,
+          value: null,
+          segments: cloned.distributionByPeriod[targetIdx].segments.map((s: any) => ({ 
+            ...s, 
+            value: 0, 
+            percentage: 0 
+          }))
+        };
+      }
+      
+      // Also adjust trendData to show a gap/null
+      if (cloned.trendData && cloned.trendData.data && cloned.trendData.data.length > 1) {
+        if (typeof cloned.trendData.data[1] === 'number') {
+          cloned.trendData.data[1] = null;
+        } else {
+          cloned.trendData.data[1] = { ...cloned.trendData.data[1], value: null };
+        }
+      }
+    }
+
     return cloned;
-  }, []);
+  }, [type]);
 
   // Helper to process metric data for a specific tab
   const getProcessedMetricData = React.useCallback((tabId: TabId, mockData: any, isNPS: boolean = false) => {
@@ -974,7 +1008,8 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
           surveyId: col.id, // Explicitly pass surveyId from column
           period: col.label,
           total: col.responses,
-          isBase: col.isBase
+          isBase: col.isBase,
+          status: mockItem?.status // Preserve no_responses status
         };
       });
       
@@ -994,10 +1029,11 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         // Update comparisons for footer
         rawData.comparisons = columns.map((col) => {
           const distItem = newDistribution.find(d => d.period === col.label);
-          const currentScore = getScore(distItem);
+          const isNoData = distItem?.status === 'no_responses';
+          const currentScore = isNoData ? 0 : getScore(distItem);
           
           let delta = undefined;
-          if (!col.isBase) {
+          if (!col.isBase && !isNoData) {
             // Compare non-base to the base survey
             delta = Number((currentScore - baseScore).toFixed(1));
           }
@@ -1006,7 +1042,8 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
             label: col.label,
             value: Math.round(currentScore),
             delta: delta,
-            trend: delta >= 0 ? 'up' : 'down'
+            trend: delta !== undefined ? (delta >= 0 ? 'up' : 'down') : 'neutral',
+            noData: isNoData
           };
         });
 
@@ -1035,7 +1072,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
               const colInfo = columns.find(c => c.id === item.surveyId);
               return {
                 label: colInfo?.shortLabel || item.period,
-                value: score,
+                value: item.status === 'no_responses' ? null : score,
                 total: item.total || 0
               };
             });
@@ -1048,10 +1085,11 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         // Update comparisons for footer
         rawData.comparisons = columns.map((col) => {
           const distItem = newDistribution.find(d => d.period === col.label);
-          const currentVal = distItem?.segments.find((s: any) => s.tone === 'positive')?.percentage || 0;
+          const isNoData = distItem?.status === 'no_responses';
+          const currentVal = isNoData ? 0 : (distItem?.segments.find((s: any) => s.tone === 'positive')?.percentage || 0);
           
           let delta = undefined;
-          if (!col.isBase) {
+          if (!col.isBase && !isNoData) {
             // Compare non-base to the base survey
             delta = Number((currentVal - baseVal).toFixed(1));
           }
@@ -1060,7 +1098,8 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
             label: col.label,
             value: Math.round(currentVal),
             delta: delta,
-            trend: delta >= 0 ? 'up' : 'down'
+            trend: delta !== undefined ? (delta >= 0 ? 'up' : 'down') : 'neutral',
+            noData: isNoData
           };
         });
 
@@ -1089,7 +1128,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
               const colInfo = columns.find(c => c.id === item.surveyId);
               return {
                 label: colInfo?.shortLabel || item.period,
-                value: Math.round(posVal),
+                value: item.status === 'no_responses' ? null : Math.round(posVal),
                 total: item.total || 0
               };
             });
@@ -1276,12 +1315,15 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     return { label: baseColumn.label, value: Math.round(positivePercentage), isBase: true };
   }, [baseColumn, favData]);
 
-  const favFooterItems = React.useMemo(() => (favData?.comparisons || []).map(c => ({
-    label: c.label,
-    value: `${formatPercentage(c.value)}%`,
-    delta: c.delta !== undefined ? `${c.delta >= 0 ? '+' : ''}${c.delta}%` : undefined,
-    tone: c.trend === 'up' ? 'positive' : c.trend === 'down' ? 'negative' : 'neutral'
-  })), [favData]);
+  const favFooterItems = React.useMemo(() => {
+    console.log('[DEBUG favFooterItems] comparisons:', JSON.stringify(favData?.comparisons?.map((c: any) => ({ label: c.label, value: c.value, noData: c.noData, status: c.status }))));
+    return (favData?.comparisons || []).map((c: any) => ({
+      label: c.label,
+      value: c.noData ? 'Sin respuestas' : `${formatPercentage(c.value)}%`,
+      delta: c.noData ? undefined : (c.delta !== undefined ? `${c.delta >= 0 ? '+' : ''}${c.delta}%` : undefined),
+      tone: c.noData ? 'neutral' : (c.trend === 'up' ? 'positive' : c.trend === 'down' ? 'negative' : 'neutral')
+    }));
+  }, [favData]);
 
   const distributionItems = React.useMemo(() => {
     const dist = favData?.distributionByPeriod || [];
@@ -1681,6 +1723,44 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     const fullUrl = `${baseUrl}?${params.toString()}`;
     return fullUrl;
   }, [baseId, comparativeIds, activeTab, shareWithFilters, dimensionsView, getSectionFilters]);
+
+  const renderTableLegend = (context: 'dimension' | 'question' | 'sentiment' = 'dimension') => (
+    <div className="flex items-center gap-5 py-4 border-b border-border/20 mb-6 flex-wrap">
+      <span className="text-[10px] font-bold tracking-widest text-text-secondary/40 uppercase mr-1">Leyenda:</span>
+      <div className="flex items-center gap-2">
+        <div className="w-2.5 h-2.5 rounded-full bg-status-positive" />
+        <span className="text-[11px] font-bold text-text-secondary">Mejora significativa</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-2.5 h-2.5 rounded-full bg-text-secondary/20" />
+        <span className="text-[11px] font-bold text-text-secondary">Sin variación relevante</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-2.5 h-2.5 rounded-full bg-destructive" />
+        <span className="text-[11px] font-bold text-text-secondary">Caída significativa</span>
+      </div>
+      {type === 'Cultura' && (
+        <>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-muted/20 px-2 py-0.5 rounded border border-border/5">
+              <Minus className="h-2.5 w-2.5 text-text-secondary/40" />
+              <span className="text-[9px] font-extrabold text-text-secondary/40 uppercase tracking-tighter">
+                {context === 'dimension' ? 'Sin Dimensión' : context === 'question' ? 'Sin Pregunta' : 'Sin Dato'}
+              </span>
+            </div>
+            <span className="text-[11px] font-medium text-text-secondary/60 italic">No evaluada</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-muted/20 px-2 py-0.5 rounded border border-border/5">
+              <Lock className="h-2.5 w-2.5 text-text-secondary/40" />
+              <span className="text-[9px] font-extrabold text-text-secondary/40 uppercase tracking-tighter">Privado</span>
+            </div>
+            <span className="text-[11px] font-medium text-text-secondary/60 italic">Dato protegido</span>
+          </div>
+        </>
+      )}
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden animate-in fade-in duration-700">
@@ -2874,7 +2954,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
                   <CardContent className="px-8 pb-8">
                     {dimensionsView === 'table' ? (
-                      <Table>
+                      <>
+                        {renderTableLegend('dimension')}
+                        <Table>
                         <TableHeader className="[&_tr]:border-b-0">
                           <TableRow className="hover:bg-transparent border-b border-border/40">
                             <TableHead className="h-14 text-[11px] font-bold tracking-tight text-text-secondary/50 pl-0 w-[30%]">Dimensión</TableHead>
@@ -2915,14 +2997,59 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                     <TableCell key={col.id} className="text-center">
                                       <div className="flex flex-col items-center gap-1.5">
                                         <div className="flex items-center gap-2">
-                                          <span className={cn(
-                                            "font-bold",
-                                            col.isBase ? "text-base text-brand" : "text-sm text-text-secondary"
-                                          )}>
-                                            {score !== null ? `${score}%` : '—'}
-                                          </span>
-                                          {!col.isBase && score !== null && baseScore !== null && (
-                                            <DeltaPill value={Number((score - baseScore).toFixed(1))} size="xs" />
+                                          {(type === 'Cultura' && (dim.id + col.id).length % 12 === 0 && (dim as any)[col.dimKey] !== undefined) ? (
+                                            <TooltipProvider delayDuration={0}>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="text-[10px] font-bold text-text-secondary/50 uppercase tracking-wider cursor-help bg-muted/30 px-1.5 py-0.5 rounded border border-border/10 transition-colors hover:bg-muted/50">
+                                                    Privado
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-surface border border-border/40 shadow-premium p-3 rounded-xl max-w-[220px]">
+                                                  <p className="text-xs font-semibold leading-relaxed text-text-secondary">
+                                                    Esta información es privada porque no se alcanzó el umbral mínimo de respuestas necesarias para garantizar el anonimato.
+                                                  </p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          ) : (
+                                            <>
+                                              <span className={cn(
+                                                "font-bold",
+                                                col.isBase ? "text-base text-brand" : "text-sm text-text-secondary"
+                                              )}>
+                                                {score !== null ? (
+                                                  `${score}%`
+                                                ) : (
+                                                  <TooltipProvider delayDuration={0}>
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        {type === 'Cultura' && (dim as any)[col.dimKey] === undefined ? (
+                                                          <span className="flex items-center gap-1 text-[10px] font-bold text-text-secondary/40 uppercase tracking-tight bg-muted/20 px-1.5 py-0.5 rounded border border-border/5 cursor-help transition-colors hover:bg-muted/30">
+                                                            <Minus className="h-2.5 w-2.5" />
+                                                            Sin Dimensión
+                                                          </span>
+                                                        ) : (
+                                                          <span className="text-sm font-bold text-text-secondary/30 cursor-help underline decoration-dotted decoration-text-secondary/10 underline-offset-4">
+                                                            —
+                                                          </span>
+                                                        )}
+                                                      </TooltipTrigger>
+                                                      <TooltipContent className="bg-surface border border-border/40 shadow-premium p-3 rounded-xl max-w-[220px]">
+                                                        <p className="text-xs font-semibold leading-relaxed text-text-secondary">
+                                                          {(dim as any)[col.dimKey] === undefined 
+                                                            ? "Esta dimensión no formaba parte del diseño de esta medición específica."
+                                                            : "No se registraron respuestas suficientes para esta dimensión en este periodo."}
+                                                        </p>
+                                                      </TooltipContent>
+                                                    </Tooltip>
+                                                  </TooltipProvider>
+                                                )}
+                                              </span>
+                                              {!col.isBase && score !== null && baseScore !== null && (
+                                                <DeltaPill value={Number((score - baseScore).toFixed(1))} size="xs" />
+                                              )}
+                                            </>
                                           )}
                                         </div>
                                         <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">n={col.responses}</span>
@@ -2941,7 +3068,8 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                           )}
                         </TableBody>
                       </Table>
-                    ) : (
+                    </>
+                  ) : (
                       <div className="space-y-6">
                         {/* Heatmap Legend */}
                         <div className="flex items-center gap-4 py-4 border-y border-border/20 flex-wrap">
@@ -2996,14 +3124,52 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                     </td>
                                     {heatmapData.segments.map((seg) => {
                                       const cell = dim.segments[seg.id];
-                                      if (!cell) return <td key={seg.id} className="p-2 text-center"><span className="text-xs text-text-secondary">-</span></td>;
+                                      if (!cell) {
+                                        const isNewInBase = (dimBase as any).p1 === undefined || (dimBase as any).p1 === null;
+                                        return (
+                                          <td key={seg.id} className="p-2 text-center">
+                                            <TooltipProvider delayDuration={0}>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="text-xs font-bold text-text-secondary/30 cursor-help underline decoration-dotted decoration-text-secondary/10 underline-offset-4">
+                                                    —
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-surface border border-border/40 shadow-premium p-3 rounded-xl max-w-[220px]">
+                                                  <p className="text-xs font-semibold leading-relaxed text-text-secondary">
+                                                    {isNewInBase 
+                                                      ? "Esta dimensión solo forma parte de la encuesta base. Las otras encuestas de comparación no cuentan con esta dimensión, por lo que no existen variaciones (deltas) para comparar."
+                                                      : "No hay datos suficientes para este segmento demográfico en esta dimensión."}
+                                                  </p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          </td>
+                                        );
+                                      }
 
                                       if (cell.status === 'private') {
                                         return (
                                           <td key={seg.id} className="p-2 text-center">
-                                            <div className="w-full h-12 rounded-lg bg-muted/30 border border-border/20 flex items-center justify-center">
-                                              <span className="text-xs font-bold text-text-secondary">Privado</span>
-                                            </div>
+                                            <TooltipProvider delayDuration={0}>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <div className="w-full h-12 rounded-lg bg-muted/30 border border-border/20 flex flex-col items-center justify-center gap-1 cursor-help transition-all hover:bg-muted/40">
+                                                    <div className="w-3.5 h-3.5 rounded-full bg-text-secondary/10 flex items-center justify-center">
+                                                      <svg className="w-2 h-2 text-text-secondary/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                      </svg>
+                                                    </div>
+                                                    <span className="text-[9px] font-bold text-text-secondary/60 uppercase tracking-wider">Privado</span>
+                                                  </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-surface border border-border/40 shadow-premium p-3 rounded-xl max-w-[220px]">
+                                                  <p className="text-xs font-semibold leading-relaxed text-text-secondary">
+                                                    Esta información es privada porque no se alcanzó el umbral mínimo de respuestas necesarias para garantizar el anonimato.
+                                                  </p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
                                           </td>
                                         );
                                       }
@@ -3170,6 +3336,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                     </div>
                   </CardHeader>
                   <CardContent className="px-8 pb-8">
+                    {renderTableLegend('question')}
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader className="[&_tr]:border-b-0">
@@ -3219,14 +3386,59 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                     <TableCell key={col.id} className="text-center">
                                       <div className="flex flex-col items-center gap-1.5">
                                         <div className="flex items-center gap-2">
-                                          <span className={cn(
-                                            "font-bold",
-                                            col.isBase ? "text-base text-brand" : "text-sm text-text-secondary"
-                                          )}>
-                                            {score !== null ? `${score}%` : '—'}
-                                          </span>
-                                          {!col.isBase && score !== null && baseScore !== null && (
-                                            <DeltaPill value={Number((score - baseScore).toFixed(1))} size="xs" />
+                                          {(type === 'Cultura' && (item.id + col.id).length % 14 === 0 && (item as any)[col.quesKey] !== undefined) ? (
+                                            <TooltipProvider delayDuration={0}>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="text-[10px] font-bold text-text-secondary/50 uppercase tracking-wider cursor-help bg-muted/30 px-1.5 py-0.5 rounded border border-border/10 transition-colors hover:bg-muted/50">
+                                                    Privado
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-surface border border-border/40 shadow-premium p-3 rounded-xl max-w-[220px]">
+                                                  <p className="text-xs font-semibold leading-relaxed text-text-secondary">
+                                                    Esta información es privada porque no se alcanzó el umbral mínimo de respuestas necesarias para garantizar el anonimato.
+                                                  </p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          ) : (
+                                            <>
+                                              <span className={cn(
+                                                "font-bold",
+                                                col.isBase ? "text-base text-brand" : "text-sm text-text-secondary"
+                                              )}>
+                                                {score !== null ? (
+                                                  `${score}%`
+                                                ) : (
+                                                  <TooltipProvider delayDuration={0}>
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        {type === 'Cultura' && (item as any)[col.quesKey] === undefined ? (
+                                                          <span className="flex items-center gap-1 text-[10px] font-bold text-text-secondary/40 uppercase tracking-tight bg-muted/20 px-1.5 py-0.5 rounded border border-border/5 cursor-help transition-colors hover:bg-muted/30">
+                                                            <Minus className="h-2.5 w-2.5" />
+                                                            Sin Pregunta
+                                                          </span>
+                                                        ) : (
+                                                          <span className="text-sm font-bold text-text-secondary/30 cursor-help underline decoration-dotted decoration-text-secondary/10 underline-offset-4">
+                                                            —
+                                                          </span>
+                                                        )}
+                                                      </TooltipTrigger>
+                                                      <TooltipContent className="bg-surface border border-border/40 shadow-premium p-3 rounded-xl max-w-[220px]">
+                                                        <p className="text-xs font-semibold leading-relaxed text-text-secondary">
+                                                          {(item as any)[col.quesKey] === undefined
+                                                            ? "Esta pregunta no fue incluida en el diseño de esta medición específica."
+                                                            : "No se registraron respuestas suficientes para esta pregunta en este periodo."}
+                                                        </p>
+                                                      </TooltipContent>
+                                                    </Tooltip>
+                                                  </TooltipProvider>
+                                                )}
+                                              </span>
+                                              {!col.isBase && score !== null && baseScore !== null && (
+                                                <DeltaPill value={Number((score - baseScore).toFixed(1))} size="xs" />
+                                              )}
+                                            </>
                                           )}
                                         </div>
                                         <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">n={col.responses}</span>
@@ -3377,6 +3589,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                   </CardHeader>
 
                   <CardContent className="px-8 pb-8">
+                    {renderTableLegend('sentiment')}
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
@@ -3432,14 +3645,59 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                     <TableCell key={col.id} className="text-center">
                                       <div className="flex flex-col items-center gap-1.5">
                                         <div className="flex items-center gap-2">
-                                          <span className={cn(
-                                            "font-bold",
-                                            col.isBase ? "text-base text-brand" : "text-sm text-text-secondary"
-                                          )}>
-                                            {data !== null ? `${data.positive}%` : '—'}
-                                          </span>
-                                          {!col.isBase && data !== null && baseData !== null && (
-                                            <DeltaPill value={Number((data.positive - baseData.positive).toFixed(1))} size="xs" />
+                                          {(type === 'Cultura' && (item.id + col.id).length % 16 === 0 && (item as any)[col.sentKey] !== undefined) ? (
+                                            <TooltipProvider delayDuration={0}>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="text-[10px] font-bold text-text-secondary/50 uppercase tracking-wider cursor-help bg-muted/30 px-1.5 py-0.5 rounded border border-border/10 transition-colors hover:bg-muted/50">
+                                                    Privado
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-surface border border-border/40 shadow-premium p-3 rounded-xl max-w-[220px]">
+                                                  <p className="text-xs font-semibold leading-relaxed text-text-secondary">
+                                                    Esta información es privada porque no se alcanzó el umbral mínimo de respuestas necesarias para garantizar el anonimato.
+                                                  </p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          ) : (
+                                            <>
+                                              <span className={cn(
+                                                "font-bold",
+                                                col.isBase ? "text-base text-brand" : "text-sm text-text-secondary"
+                                              )}>
+                                                {data !== null ? (
+                                                  `${data.positive}%`
+                                                ) : (
+                                                  <TooltipProvider delayDuration={0}>
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        {type === 'Cultura' && (item as any)[col.sentKey] === undefined ? (
+                                                          <span className="flex items-center gap-1 text-[10px] font-bold text-text-secondary/40 uppercase tracking-tight bg-muted/20 px-1.5 py-0.5 rounded border border-border/5 cursor-help transition-colors hover:bg-muted/30">
+                                                            <Minus className="h-2.5 w-2.5" />
+                                                            Sin Dimensión
+                                                          </span>
+                                                        ) : (
+                                                          <span className="text-sm font-bold text-text-secondary/30 cursor-help underline decoration-dotted decoration-text-secondary/10 underline-offset-4">
+                                                            —
+                                                          </span>
+                                                        )}
+                                                      </TooltipTrigger>
+                                                      <TooltipContent className="bg-surface border border-border/40 shadow-premium p-3 rounded-xl max-w-[220px]">
+                                                        <p className="text-xs font-semibold leading-relaxed text-text-secondary">
+                                                          {(item as any)[col.sentKey] === undefined
+                                                            ? "Esta dimensión no fue evaluada en esta encuesta, por lo que no existen comentarios."
+                                                            : "No se encontraron comentarios abiertos para esta dimensión en este periodo."}
+                                                        </p>
+                                                      </TooltipContent>
+                                                    </Tooltip>
+                                                  </TooltipProvider>
+                                                )}
+                                              </span>
+                                              {!col.isBase && data !== null && baseData !== null && (
+                                                <DeltaPill value={Number((data.positive - baseData.positive).toFixed(1))} size="xs" />
+                                              )}
+                                            </>
                                           )}
                                         </div>
                                         <span className="text-[10px] font-bold tracking-tight text-text-secondary/40">

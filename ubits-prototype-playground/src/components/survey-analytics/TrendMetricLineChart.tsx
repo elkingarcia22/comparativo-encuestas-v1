@@ -74,9 +74,10 @@ export function TrendMetricLineChart({
         const point = s.data.find(p => p.label === label)
         if (!point) return null
         return {
-          value: point.value,
+          value: point.value ?? 0,
           total: point.total,
-          label: point.label
+          label: point.label,
+          noData: point.value === null || point.value === undefined
         }
       })
 
@@ -189,21 +190,34 @@ export function TrendMetricLineChart({
             const isObject = data && typeof data === 'object';
             const val = isObject ? data.value : data;
             const total = isObject ? data.total : undefined;
+            const noData = isObject ? data.noData : false;
             const color = param.color;
             const seriesName = param.seriesName;
 
-            html += `
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; last-child: margin-bottom: 0;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${color};"></div>
-                  <span style="font-size: 12px; color: #374151; font-weight: 500;">${seriesName}</span>
+            if (noData) {
+              html += `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${color}; opacity: 0.3;"></div>
+                    <span style="font-size: 12px; color: #374151; font-weight: 500;">${seriesName}</span>
+                  </div>
+                  <span style="font-size: 11px; font-weight: 500; color: #9CA3AF; font-style: italic;">Sin respuestas</span>
                 </div>
-                <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                  <span style="font-size: 12px; font-weight: 700; color: #111827;">${val}${seriesName.toLowerCase().includes('nps') ? '' : '%'}</span>
-                  ${total !== undefined ? `<span style="font-size: 10px; color: #6B7280;">${total} respuestas</span>` : ''}
+              `;
+            } else {
+              html += `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; last-child: margin-bottom: 0;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${color};"></div>
+                    <span style="font-size: 12px; color: #374151; font-weight: 500;">${seriesName}</span>
+                  </div>
+                  <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                    <span style="font-size: 12px; font-weight: 700; color: #111827;">${val}${seriesName.toLowerCase().includes('nps') ? '' : '%'}</span>
+                    ${total !== undefined ? `<span style="font-size: 10px; color: #6B7280;">${total} respuestas</span>` : ''}
+                  </div>
                 </div>
-              </div>
-            `;
+              `;
+            }
           });
 
           html += `</div>`;

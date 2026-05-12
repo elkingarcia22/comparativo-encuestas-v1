@@ -504,28 +504,25 @@ export const CULTURA_DIMENSIONS_DATA = [
   {
     id: "cdim-6",
     name: "Liderazgo Inspirador",
-    description: "Visión y capacidad de guiar de los líderes (Sin historial previo)",
+    description: "Visión y capacidad de guiar de los líderes (Nueva dimensión)",
     currentScore: 85,
-    p1: null,
-    p2: null,
-    p3: null, 
-    p4: null,
-    delta: null,
-    trend: 'up' as const,
+    delta: 0,
+    trend: 'neutral' as const,
     responses: 480
+    // p1-p4 will be undefined
   },
   {
     id: "cdim-7",
-    name: "Recursos y Herramientas",
-    description: "Disponibilidad de elementos para el trabajo diario (Sin datos actuales)",
-    currentScore: null,
-    p1: 75,
-    p2: 72,
-    p3: 70, 
-    p4: 68,
-    delta: null,
+    name: "Bienestar Emocional",
+    description: "Fomento de la salud mental y equilibrio vida-trabajo",
+    currentScore: 78,
+    p1: null, // No responses
+    p2: undefined, // Not in survey
+    p3: 72,
+    p4: null,
+    delta: 6,
     trend: 'up' as const,
-    responses: 0
+    responses: 1150
   },
   {
     id: "cdim-8",
@@ -608,8 +605,8 @@ export const COMPARATIVE_QUESTIONS_DATA = [
     p1: 70,
     p2: 68,
     trend: [60, 65, 68, 70, 76],
-    delta: 6,
-    responses: 430
+    delta: 5,
+    responses: 1010
   }
 ];
 
@@ -690,6 +687,15 @@ export const CULTURA_QUESTIONS_DATA = [
     trend: [60, 65],
     delta: null,
     responses: 0
+  },
+  {
+    id: "cq-8",
+    question: "Los líderes promueven un balance saludable entre vida y trabajo",
+    dimension: "Bienestar Emocional",
+    currentScore: 82,
+    delta: 0,
+    responses: 1150
+    // p1-p4 undefined
   }
 ];
 

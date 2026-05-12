@@ -99,23 +99,31 @@ export function ResponseStackedBar({
           )}
           
           <div className="flex items-center gap-4 pb-0.5">
-            {value !== undefined && (
-              <span className="text-[11px] font-bold text-text-brand tabular-nums">
-                {typeof value === 'number' && showPercentages ? `${value}%` : value}
+            {processedSegments.length === 0 ? (
+              <span className="text-[10px] text-muted-foreground font-medium italic">
+                Sin respuestas
               </span>
-            )}
-            {total !== undefined && (
-              <span className="text-[10px] font-bold text-text-muted/30">
-                n={total}
-              </span>
-            )}
-            {delta !== undefined && (
-              <DeltaPill 
-                value={delta} 
-                label={deltaLabel} 
-                tone={deltaTone} 
-                size="sm" 
-              />
+            ) : (
+              <>
+                {value !== undefined && value !== null && (
+                  <span className="text-[11px] font-bold text-text-brand tabular-nums">
+                    {typeof value === 'number' && showPercentages ? `${value}%` : value}
+                  </span>
+                )}
+                {total !== undefined && total > 0 && (
+                  <span className="text-[10px] font-bold text-text-muted/30">
+                    n={total}
+                  </span>
+                )}
+                {delta !== undefined && (
+                  <DeltaPill 
+                    value={delta} 
+                    label={deltaLabel} 
+                    tone={deltaTone} 
+                    size="sm" 
+                  />
+                )}
+              </>
             )}
           </div>
         </div>
@@ -189,9 +197,20 @@ export function ResponseStackedBar({
               </Tooltip>
             ))
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground font-medium italic">
-              Sin datos de respuesta
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full h-full cursor-default" />
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                sideOffset={8}
+                className="bg-background/95 text-foreground border border-border/80 shadow-md p-2.5 max-w-[250px] rounded-sm pointer-events-none z-[100]"
+              >
+                <div className="text-[12px] font-medium text-foreground/90 leading-snug">
+                  Esta encuesta no tiene respuestas por los filtros que está aplicando
+                </div>
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
 

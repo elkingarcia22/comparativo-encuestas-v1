@@ -12,7 +12,9 @@ Facilita la toma de decisiones basada en datos históricos. Elimina la necesidad
 
 ## 3. Alcance / No Alcance
 - **Alcance**:
-  - Encuestas de tipo **Clima, Cultura y NPS**.
+  - **Clima**: Enfocado en ambiente laboral.
+  - **Cultura**: Enfocado en valores y comportamientos.
+  - **NPS**: Enfocado en lealtad y recomendación.
   - Comparación de 2 a 5 encuestas del mismo tipo.
   - Selección de una encuesta "Base" como ancla de comparación.
   - Filtrado demográfico completo (Líder, Área, Rol, Ciudad, País, etc.).
@@ -24,11 +26,12 @@ Facilita la toma de decisiones basada en datos históricos. Elimina la necesidad
 1. **Configuración (Wizard)**:
    - **Paso 1**: Elegir Tipo de Encuesta.
    - **Paso 2**: Seleccionar encuestas del listado (mín. 2, máx. 5).
-   - **Paso 3**: Definir cuál es la **Base** (Tooltip: *"Punto de referencia para calcular mejoras o caídas"*).
-2. **Dashboard**: Visualización de Cards de KPI y Tabla de Dimensiones.
-3. **Filtros**: Aplicación de filtros demográficos que actualizan todo el sistema.
-4. **Análisis**: Apertura de Drawer para ver comentarios e insights de IA.
-5. **Reportes**: Exportación a Excel/PDF o copia de enlace compartido.
+   - **Paso 3**: Definir cuál es la **Base** (Tooltip Icono (i): *"La encuesta base es el punto de referencia principal. Todas las demás se compararán contra esta para calcular las mejoras o caídas (deltas)."*).
+4. **Finalizar**: Clic en "Ver Comparativo" -> Toast de Éxito: *"Comparativo generado exitosamente."*
+5. **Dashboard**: Visualización de Cards de KPI y Tabla de Dimensiones.
+6. **Filtros**: Aplicación de filtros demográficos que actualizan todo el sistema.
+7. **Análisis**: Apertura de Drawer para ver comentarios e insights de IA.
+8. **Reportes**: Exportación a Excel/PDF o copia de enlace compartido.
 
 ## 5. Prototipo Funcional como Fuente de Verdad
 La implementación en `/src/` es el referente técnico:
@@ -43,6 +46,10 @@ La implementación en `/src/` es el referente técnico:
   - Regla: Si $n < \text{Umbral}$ (ej: 3, 5, 10), se muestra el candado 🔒.
   - Tooltip: *"Datos protegidos por umbral de anonimato (Umbral: X)."*
 - **Estado Sin Datos ($n=0$)**: Se muestra el texto **"Sin respuestas"** o guion "—".
+- **Visibilidad por Producto**:
+  - **Clima**: Dashboard completo (Favorabilidad, Participación, NPS).
+  - **Cultura**: Oculta NPS (Grid de 2 columnas: Fav, Part).
+  - **NPS**: Oculta Favorabilidad (Participación y Score NPS).
 
 ## 7. Comportamiento UI por Componente
 ### Matriz de Estados y Tooltips
@@ -51,7 +58,9 @@ La implementación en `/src/` es el referente técnico:
 | **Cards KPI** | $n=0$ | "Sin respuestas" | "No hay datos para los filtros seleccionados." |
 | **Delta Pill** | Mejora | Píldora Verde | "Mejora significativa respecto a la encuesta base." |
 | **Delta Pill** | Caída | Píldora Roja | "Retroceso respecto a la encuesta base." |
-| **Heatmap** | Sin respuestas | Celda Gris | "Puntaje promedio del segmento [X] en la dimensión [Y]." |
+| **Heatmap** | Celda | Color Escala | "Puntaje promedio del segmento [X] en la dimensión [Y]." |
+| **Heatmap** | Sin respuestas | Celda Gris | "Sin respuestas suficientes para mostrar datos." |
+| **Gráfico** | Tendencia | Línea de Tiempo | "Línea de tiempo que conecta los resultados históricos." |
 | **Gráfico** | Sin datos | Vacío | "Sin datos suficientes para graficar." |
 | **N/A en Tablas** | Faltante | "N/A" | "Esta dimensión no fue evaluada en esta encuesta específica." |
 
@@ -63,7 +72,7 @@ La implementación en `/src/` es el referente técnico:
   - **Favorabilidad**: *"Suma de respuestas positivas (4 y 5) sobre el total de respuestas."*
   - **Participación**: *"Colaboradores que respondieron vs. Colaboradores invitados."*
   - **NPS**: *"Net Promoter Score: % Promotores (9-10) - % Detractores (0-6)."*
-- Si el líder no tiene respuestas: Tooltip: *"No se encontraron registros para este segmento en este proceso."*
+- Si el líder no tiene respuestas: Tooltip: *"No se encontraron registros para este segmento en este proceso de medición."*
 
 ### RUTA 2: Análisis IA y Comentarios
 - **Tooltip Icono IA**: *"Este análisis resume automáticamente los comentarios de los colaboradores mediante inteligencia artificial."*
@@ -86,7 +95,7 @@ La implementación en `/src/` es el referente técnico:
 - **Iconografía**: 🌱 (Clima), ❤️ (Cultura), ⏱️ (NPS).
 - **Manejo de Errores**:
   - Toast Error: *"Ocurrió un error al procesar la solicitud. Por favor, intenta de nuevo."*
-  - Error Carga: *"Error de conexión. No pudimos recuperar la información."*
+  - Error Carga: *"Error de conexión. No pudimos recuperar la información del comparativo."*
 
 ## 11. Edge Cases
 - **Dimensiones Inconsistentes**: Manejo de "N/A" sin romper el layout.

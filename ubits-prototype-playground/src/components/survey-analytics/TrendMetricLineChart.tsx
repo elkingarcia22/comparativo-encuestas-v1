@@ -29,7 +29,7 @@ export function TrendMetricLineChart({
   className,
   standalone = false,
 }: TrendMetricLineChartProps) {
-  
+
   // Build ECharts option
   const option: EChartsOption = React.useMemo(() => {
     if (!series || series.length === 0) return {}
@@ -38,10 +38,10 @@ export function TrendMetricLineChart({
     const theme = getUbitsChartTheme()
     const brandColor = theme.color[0] // Primary brand color from theme
 
-    // Extract all unique labels (X axis)
-    const labels = Array.from(
-      new Set(series.flatMap(s => s.data.map(p => p.label)))
-    ).sort()
+    // Extract all unique labels (X axis) preserving the original order from the first series
+    const labels = series.length > 0 
+      ? Array.from(new Set(series[0].data.map(p => p.label)))
+      : Array.from(new Set(series.flatMap(s => s.data.map(p => p.label))));
 
     interface EChartsSeriesOption {
       name: string
@@ -180,10 +180,10 @@ export function TrendMetricLineChart({
         shadowBlur: 10,
         formatter: (params: any) => {
           if (!params || params.length === 0) return '';
-          
+
           let html = `<div style="padding: 12px; min-width: 160px; border-radius: 8px;">`;
           html += `<div style="font-size: 10px; font-weight: 700; color: rgba(0,0,0,0.4); margin-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 4px;">${params[0].axisValue}</div>`;
-          
+
           params.forEach((param: any) => {
             const data = param.data;
             const isObject = data && typeof data === 'object';
@@ -191,7 +191,7 @@ export function TrendMetricLineChart({
             const total = isObject ? data.total : undefined;
             const color = param.color;
             const seriesName = param.seriesName;
-            
+
             html += `
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; last-child: margin-bottom: 0;">
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -205,7 +205,7 @@ export function TrendMetricLineChart({
               </div>
             `;
           });
-          
+
           html += `</div>`;
           return html;
         }

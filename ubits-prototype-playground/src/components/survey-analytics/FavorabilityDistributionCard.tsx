@@ -59,7 +59,7 @@ export function FavorabilityDistributionCard({
     return (
       <Card className={cn("h-full", className)}>
         <CardHeader>
-          {title && <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{title}</CardTitle>}
+          {title && <CardTitle className="text-sm font-bold tracking-wider text-muted-foreground">{title}</CardTitle>}
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center min-h-[160px]">
           <Alert variant="destructive">

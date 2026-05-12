@@ -21,10 +21,10 @@ export const COMPARATIVE_SURVEYS_LIST: SurveyListItem[] = [
   { id: "c5", name: "Clima Organizacional - Q1 2024", type: "Clima", status: "Finalizado", statusVariant: "positive", startDate: "15 ene 2024", endDate: "30 ene 2024", participants: "385", progress: 100 },
   
   // Cultura (Added 2025/2026)
-  { id: "cu2026", name: "Cultura y Valores UBITS 2026", type: "Cultura", status: "Finalizado", statusVariant: "positive", startDate: "01 mar 2026", endDate: "15 mar 2026", participants: "550", progress: 100 },
-  { id: "cu2025", name: "Cultura y Valores UBITS 2025", type: "Cultura", status: "Finalizado", statusVariant: "positive", startDate: "01 mar 2025", endDate: "15 mar 2025", participants: "530", progress: 100 },
-  { id: "cu1", name: "Cultura y Valores UBITS 2024", type: "Cultura", status: "Finalizado", statusVariant: "positive", startDate: "01 mar 2024", endDate: "15 mar 2024", participants: "510", progress: 100 },
-  { id: "cu4", name: "Alineación de Propósito 2024", type: "Cultura", status: "Finalizado", statusVariant: "positive", startDate: "10 nov 2024", endDate: "25 nov 2024", participants: "445", progress: 100 },
+  { id: "cu2026", name: "Cultura y Valores - 2026", type: "Cultura", status: "Finalizado", statusVariant: "positive", startDate: "01 mar 2026", endDate: "15 mar 2026", participants: "550", progress: 100 },
+  { id: "cu2025", name: "Cultura y Valores - 2025", type: "Cultura", status: "Finalizado", statusVariant: "positive", startDate: "01 mar 2025", endDate: "15 mar 2025", participants: "530", progress: 100 },
+  { id: "cu1", name: "Cultura y Valores - 2024", type: "Cultura", status: "Finalizado", statusVariant: "positive", startDate: "01 mar 2024", endDate: "15 mar 2024", participants: "510", progress: 100 },
+  { id: "cu4", name: "Alineación de Propósito - 2024", type: "Cultura", status: "Finalizado", statusVariant: "positive", startDate: "10 nov 2024", endDate: "25 nov 2024", participants: "445", progress: 100 },
   
   // NPS (Added 2025/2026)
   { id: "n2026-1", name: "NPS Clientes Premium Q1 2026", type: "NPS", status: "Finalizado", statusVariant: "positive", startDate: "01 feb 2026", endDate: "15 feb 2026", participants: "950", progress: 100 },
@@ -707,30 +707,43 @@ export const CULTURA_FAVORABILITY_DATA = {
   },
   distributionByPeriod: [
     {
+      surveyId: 'cu2026',
       period: 'Cultura 2026 (BASE)',
       total: 550,
       segments: [
-        { id: 'cu-fav-1', label: 'Favorable', value: 86.5, percentage: 86.5, tone: 'positive' as const },
-        { id: 'cu-neu-1', label: 'Neutral', value: 8.5, percentage: 8.5, tone: 'neutral' as const },
-        { id: 'cu-des-1', label: 'Desfavorable', value: 5.0, percentage: 5.0, tone: 'negative' as const },
+        { id: 'cu-fav-pos-1', label: 'Favorable', value: 86.5, percentage: 86.5, tone: 'positive' as const },
+        { id: 'cu-fav-neu-1', label: 'Neutral', value: 10, percentage: 10, tone: 'neutral' as const },
+        { id: 'cu-fav-neg-1', label: 'Desfavorable', value: 3.5, percentage: 3.5, tone: 'negative' as const },
       ]
     },
     {
+      surveyId: 'cu2025',
       period: 'Cultura 2025',
       total: 530,
       segments: [
-        { id: 'cu-fav-2', label: 'Favorable', value: 84.8, percentage: 84.8, tone: 'positive' as const },
-        { id: 'cu-neu-2', label: 'Neutral', value: 10.2, percentage: 10.2, tone: 'neutral' as const },
-        { id: 'cu-des-2', label: 'Desfavorable', value: 5.0, percentage: 5.0, tone: 'negative' as const },
+        { id: 'cu-fav-pos-2', label: 'Favorable', value: 84.8, percentage: 84.8, tone: 'positive' as const },
+        { id: 'cu-fav-neu-2', label: 'Neutral', value: 11, percentage: 11, tone: 'neutral' as const },
+        { id: 'cu-fav-neg-2', label: 'Desfavorable', value: 4.2, percentage: 4.2, tone: 'negative' as const },
       ]
     },
     {
+      surveyId: 'cu1',
       period: 'Cultura 2024',
       total: 510,
       segments: [
-        { id: 'cu-fav-3', label: 'Favorable', value: 82.0, percentage: 82.0, tone: 'positive' as const },
-        { id: 'cu-neu-3', label: 'Neutral', value: 12.0, percentage: 12.0, tone: 'neutral' as const },
-        { id: 'cu-des-3', label: 'Desfavorable', value: 6.0, percentage: 6.0, tone: 'negative' as const },
+        { id: 'cu-fav-pos-3', label: 'Favorable', value: 82.0, percentage: 82.0, tone: 'positive' as const },
+        { id: 'cu-fav-neu-3', label: 'Neutral', value: 12, percentage: 12, tone: 'neutral' as const },
+        { id: 'cu-fav-neg-3', label: 'Desfavorable', value: 6.0, percentage: 6.0, tone: 'negative' as const },
+      ]
+    },
+    {
+      surveyId: 'cu4',
+      period: 'Alineación 2024',
+      total: 480,
+      segments: [
+        { id: 'cu-fav-pos-4', label: 'Favorable', value: 78.5, percentage: 78.5, tone: 'positive' as const },
+        { id: 'cu-fav-neu-4', label: 'Neutral', value: 15, percentage: 15, tone: 'neutral' as const },
+        { id: 'cu-fav-neg-4', label: 'Desfavorable', value: 6.5, percentage: 6.5, tone: 'negative' as const },
       ]
     }
   ],
@@ -738,23 +751,25 @@ export const CULTURA_FAVORABILITY_DATA = {
     id: 'cu-fav-trend',
     label: 'Evolución de Favorabilidad Cultura',
     data: [
-      { label: '2024', value: 82.0, total: 510 },
-      { label: '2025', value: 84.8, total: 530 },
-      { label: '2026', value: 86.5, total: 550 },
+      { label: 'Alineación 2024', value: 78.5, total: 480 },
+      { label: 'Cultura 2024', value: 82.0, total: 510 },
+      { label: 'Cultura 2025', value: 84.8, total: 530 },
+      { label: 'Cultura 2026', value: 86.5, total: 550 },
     ],
     unit: '%'
   },
   comparisons: [
-    { label: '2026 (BASE)', value: 86.5, isBase: true },
-    { label: '2025', value: 84.8, delta: 1.7, trend: 'up' as const },
-    { label: '2024', value: 82.0, delta: 4.5, trend: 'up' as const },
+    { surveyId: 'cu2026', label: '2026 (BASE)', value: 86.5, isBase: true },
+    { surveyId: 'cu2025', label: '2025', value: 84.8, delta: 1.7, trend: 'up' as const },
+    { surveyId: 'cu1', label: '2024', value: 82.0, delta: 4.5, trend: 'up' as const },
+    { surveyId: 'cu4', label: 'Alineación 2024', value: 78.5, delta: 8.0, trend: 'up' as const },
   ]
 };
 
 export const CULTURA_PARTICIPATION_DATA = {
   mainMetric: {
     id: 'cu-part-2026',
-    label: 'PARTICIPACIÓN',
+    label: 'Participación',
     value: 94.5,
     previousValue: 92.5,
     delta: 2.0,
@@ -765,19 +780,39 @@ export const CULTURA_PARTICIPATION_DATA = {
   },
   distributionByPeriod: [
     {
+      surveyId: 'cu2026',
       period: 'Cultura 2026 (BASE)',
       total: 550,
       segments: [
-        { id: 'cu-part-res-1', label: 'Respondió', value: 94.5, percentage: 94.5, tone: 'positive' as const },
-        { id: 'cu-part-pen-1', label: 'Pendiente', value: 5.5, percentage: 5.5, tone: 'neutral' as const },
+        { id: 'cu-part-1', label: 'Participó', value: 92, percentage: 92, tone: 'positive' as const },
+        { id: 'cu-nopart-1', label: 'No participó', value: 8, percentage: 8, tone: 'negative' as const },
       ]
     },
     {
+      surveyId: 'cu2025',
       period: 'Cultura 2025',
       total: 530,
       segments: [
-        { id: 'cu-part-res-2', label: 'Respondió', value: 92.5, percentage: 92.5, tone: 'positive' as const },
-        { id: 'cu-part-pen-2', label: 'Pendiente', value: 7.5, percentage: 7.5, tone: 'neutral' as const },
+        { id: 'cu-part-2', label: 'Participó', value: 88, percentage: 88, tone: 'positive' as const },
+        { id: 'cu-nopart-2', label: 'No participó', value: 12, percentage: 12, tone: 'negative' as const },
+      ]
+    },
+    {
+      surveyId: 'cu1',
+      period: 'Cultura 2024',
+      total: 510,
+      segments: [
+        { id: 'cu-part-3', label: 'Participó', value: 85, percentage: 85, tone: 'positive' as const },
+        { id: 'cu-nopart-3', label: 'No participó', value: 15, percentage: 15, tone: 'negative' as const },
+      ]
+    },
+    {
+      surveyId: 'cu4',
+      period: 'Alineación 2024',
+      total: 480,
+      segments: [
+        { id: 'cu-part-4', label: 'Participó', value: 80, percentage: 80, tone: 'positive' as const },
+        { id: 'cu-nopart-4', label: 'No participó', value: 20, percentage: 20, tone: 'negative' as const },
       ]
     }
   ],
@@ -785,16 +820,18 @@ export const CULTURA_PARTICIPATION_DATA = {
     id: 'cu-part-trend',
     label: 'Evolución de Participación Cultura',
     data: [
-      { label: '2024', value: 90.5, total: 510 },
-      { label: '2025', value: 92.5, total: 530 },
-      { label: '2026', value: 94.5, total: 550 },
+      { label: 'Alineación 2024', value: 80, total: 480 },
+      { label: 'Cultura 2024', value: 85, total: 510 },
+      { label: 'Cultura 2025', value: 88, total: 530 },
+      { label: 'Cultura 2026', value: 92, total: 550 },
     ],
     unit: '%'
   },
   comparisons: [
-    { label: '2026 (BASE)', value: 94.5, isBase: true },
-    { label: '2025', value: 92.5, delta: 2.0, trend: 'up' as const },
-    { label: '2024', value: 90.5, delta: 4.0, trend: 'up' as const },
+    { surveyId: 'cu2026', label: '2026 (BASE)', value: 92, isBase: true },
+    { surveyId: 'cu2025', label: '2025', value: 88, delta: 4, trend: 'up' as const },
+    { surveyId: 'cu1', label: '2024', value: 85, delta: 7, trend: 'up' as const },
+    { surveyId: 'cu4', label: 'Alineación 2024', value: 80, delta: 12, trend: 'up' as const },
   ]
 };
 
@@ -811,21 +848,43 @@ export const CULTURA_NPS_DATA = {
   },
   distributionByPeriod: [
     {
+      surveyId: 'cu2026',
       period: 'Cultura 2026 (BASE)',
       total: 550,
       segments: [
-        { id: 'cu-prom-1', label: 'PROM.', value: 68, percentage: 68, tone: 'positive' as const },
-        { id: 'cu-neu-1', label: 'NEUT.', value: 22, percentage: 22, tone: 'neutral' as const },
-        { id: 'cu-det-1', label: 'DET.', value: 10, percentage: 10, tone: 'negative' as const },
+        { id: 'cu-prom-1', label: 'Promotores', value: 68, percentage: 68, tone: 'positive' as const },
+        { id: 'cu-neu-1', label: 'Neutros', value: 22, percentage: 22, tone: 'neutral' as const },
+        { id: 'cu-det-1', label: 'Detractores', value: 10, percentage: 10, tone: 'negative' as const },
       ]
     },
     {
+      surveyId: 'cu2025',
       period: 'Cultura 2025',
       total: 530,
       segments: [
-        { id: 'cu-prom-2', label: 'PROM.', value: 65, percentage: 65, tone: 'positive' as const },
-        { id: 'cu-neu-2', label: 'NEUT.', value: 24, percentage: 24, tone: 'neutral' as const },
-        { id: 'cu-det-2', label: 'DET.', value: 11, percentage: 11, tone: 'negative' as const },
+        { id: 'cu-prom-2', label: 'Promotores', value: 65, percentage: 65, tone: 'positive' as const },
+        { id: 'cu-neu-2', label: 'Neutros', value: 24, percentage: 24, tone: 'neutral' as const },
+        { id: 'cu-det-2', label: 'Detractores', value: 11, percentage: 11, tone: 'negative' as const },
+      ]
+    },
+    {
+      surveyId: 'cu1',
+      period: 'Cultura 2024',
+      total: 510,
+      segments: [
+        { id: 'cu-prom-3', label: 'Promotores', value: 60, percentage: 60, tone: 'positive' as const },
+        { id: 'cu-neu-3', label: 'Neutros', value: 25, percentage: 25, tone: 'neutral' as const },
+        { id: 'cu-det-3', label: 'Detractores', value: 15, percentage: 15, tone: 'negative' as const },
+      ]
+    },
+    {
+      surveyId: 'cu4',
+      period: 'Alineación 2024',
+      total: 480,
+      segments: [
+        { id: 'cu-prom-4', label: 'Promotores', value: 55, percentage: 55, tone: 'positive' as const },
+        { id: 'cu-neu-4', label: 'Neutros', value: 28, percentage: 28, tone: 'neutral' as const },
+        { id: 'cu-det-4', label: 'Detractores', value: 17, percentage: 17, tone: 'negative' as const },
       ]
     }
   ],
@@ -833,16 +892,18 @@ export const CULTURA_NPS_DATA = {
     id: 'cu-nps-trend',
     label: 'Evolución de NPS Cultura',
     data: [
-      { label: '2024', value: 50, total: 510 },
-      { label: '2025', value: 54, total: 530 },
-      { label: '2026', value: 58, total: 550 },
+      { label: 'Alineación 2024', value: 50, total: 480 },
+      { label: 'Cultura 2024', value: 52, total: 510 },
+      { label: 'Cultura 2025', value: 54, total: 530 },
+      { label: 'Cultura 2026', value: 58, total: 550 },
     ],
     unit: ''
   },
   comparisons: [
-    { label: '2026 (BASE)', value: 58, isBase: true },
-    { label: '2025', value: 54, delta: 4, trend: 'up' as const },
-    { label: '2024', value: 50, delta: 8, trend: 'up' as const },
+    { surveyId: 'cu2026', label: '2026 (BASE)', value: 58, isBase: true },
+    { surveyId: 'cu2025', label: '2025', value: 54, delta: 4, trend: 'up' as const },
+    { surveyId: 'cu1', label: '2024', value: 52, delta: 6, trend: 'up' as const },
+    { surveyId: 'cu4', label: 'Alineación 2024', value: 50, delta: 8, trend: 'up' as const },
   ]
 };
 

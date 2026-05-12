@@ -59,7 +59,7 @@ export function SurveyMetricCard({
     return (
       <Card className={cn("h-full", className)}>
         <CardHeader>
-          {title && <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{title}</CardTitle>}
+          {title && <CardTitle className="text-sm font-bold tracking-wider text-muted-foreground">{title}</CardTitle>}
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center min-h-[160px]">
           <Alert variant="destructive">
@@ -77,7 +77,7 @@ export function SurveyMetricCard({
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             {title && (
-              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
+              <CardTitle className="text-xs font-bold tracking-widest text-muted-foreground/80">
                 {title}
               </CardTitle>
             )}

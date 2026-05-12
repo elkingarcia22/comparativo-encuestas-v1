@@ -257,7 +257,7 @@
 
   /* Custom styling for tooltip inner labels */
   .tooltip-label {
-    @apply text-[10px] uppercase font-bold tracking-widest text-white/40 mb-1 block;
+    @apply text-[10px] font-bold tracking-widest text-white/40 mb-1 block;
   }
 
   .tooltip-value {

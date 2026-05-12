@@ -4,6 +4,7 @@ import type { MetricComparisonFooterProps } from './surveyAnalyticsTypes'
 
 /**
  * MetricComparisonFooter - High-density comparison section for analytic cards.
+ * Updated to be responsive with flex-wrap.
  */
 export function MetricComparisonFooter({
   items,
@@ -11,22 +12,14 @@ export function MetricComparisonFooter({
   className,
 }: MetricComparisonFooterProps) {
   
-  const gridCols = {
-    2: "grid-cols-2",
-    3: "grid-cols-2 sm:grid-cols-3",
-    4: "grid-cols-2 sm:grid-cols-4",
-    5: "grid-cols-2 sm:grid-cols-5",
-  }[columns]
-
   return (
     <div className={cn(
-      "grid gap-4 py-4 border-t border-border/40",
-      gridCols,
+      "flex flex-wrap gap-x-6 gap-y-4 py-4 border-t border-border/40",
       className
     )}>
       {items.map((item, index) => (
-        <div key={index} className="flex flex-col gap-1.5 min-w-0">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground truncate">
+        <div key={index} className="flex flex-col gap-1.5 min-w-[100px] flex-1 sm:flex-none">
+          <span className="text-[10px] font-bold tracking-wider text-muted-foreground whitespace-nowrap">
             {item.label}
           </span>
           <div className="flex items-center gap-2">

@@ -4,10 +4,14 @@ import { cn } from "@/lib/utils";
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Share2,
   Download,
   Settings,
   FileText,
+  FileCode,
+  History,
+  Loader2,
   BarChart3,
   TrendingUp,
   TrendingDown,
@@ -35,6 +39,8 @@ import {
   Minus,
   Copy,
   Lock,
+  Info,
+  RotateCcw,
 } from "lucide-react";
 import {
   Table,
@@ -179,33 +185,57 @@ const SentimentDistributionBar = ({ positive, neutral, negative, total, showTota
   const neg = negative || 0;
 
   return (
-    <div className={cn("flex flex-col gap-1.5 w-full", compact ? "min-w-[100px]" : "min-w-[140px]")}>
-      <div className={cn("w-full bg-surface-muted/50 rounded-full overflow-hidden flex shadow-inner", compact ? "h-2" : "h-3")}>
-        <div
-          className="h-full bg-status-positive transition-all duration-1000 shadow-[inset_0_1px_1px_var(--color-text-inverse)/0.3]"
-          style={{ width: `${p}%` }}
-        />
-        <div
-          className="h-full bg-muted-foreground/40 transition-all duration-1000"
-          style={{ width: `${n}%` }}
-        />
-        <div
-          className="h-full bg-status-negative transition-all duration-1000 shadow-[inset_0_1px_1px_var(--color-text-inverse)/0.2]"
-          style={{ width: `${neg}%` }}
-        />
+    <div className="flex flex-col gap-1 w-full">
+      <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-bg-secondary/50">
+        <div style={{ width: `${(p / total) * 100}%` }} className="bg-[#22C55E]" />
+        <div style={{ width: `${(n / total) * 100}%` }} className="bg-[#EAB308]" />
+        <div style={{ width: `${(neg / total) * 100}%` }} className="bg-[#EF4444]" />
       </div>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className={cn("font-bold tracking-tight", compact ? "text-xs" : "text-xs", "text-status-positive")}>{formatPercentage(p)}%</span>
+      {showTotal && (
+        <div className="flex justify-between items-center text-[10px]">
+          <span className="text-text-secondary font-medium">{total} Respuestas</span>
           {!compact && (
-            <span className="text-sm font-bold text-text-secondary/50 tracking-tight">Favorabilidad</span>
+            <div className="flex gap-2">
+              <span className="text-[#22C55E]">{Math.round((p/total)*100)}%</span>
+              <span className="text-[#EAB308]">{Math.round((n/total)*100)}%</span>
+              <span className="text-[#EF4444]">{Math.round((neg/total)*100)}%</span>
+            </div>
           )}
         </div>
-        {showTotal && (
-          <span className={cn("font-bold text-text-secondary/40 tracking-tight", compact ? "text-xs" : "text-sm")}>n={total}</span>
-        )}
-      </div>
+      )}
     </div>
+  );
+};
+
+const CircularProgress = ({ progress, size = 40, strokeWidth = 3 }: { progress: number, size?: number, strokeWidth?: number }) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (progress / 100) * circumference;
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rotate-[-90deg]">
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        fill="transparent"
+        className="text-brand/10"
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        fill="transparent"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        className="text-brand transition-all duration-300"
+      />
+    </svg>
   );
 };
 
@@ -280,15 +310,32 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   const [drawerSentimentTab, setDrawerSentimentTab] = React.useState('detalle');
   const [heatmapSegment, setHeatmapSegment] = React.useState<string>('Área');
 
-  // Export Dialog State
-  const [isExportDialogOpen, setIsExportDialogOpen] = React.useState(false);
-  const [exportFormat, setExportFormat] = React.useState<'pdf' | 'csv'>('pdf');
-  const [exportWithFilters, setExportWithFilters] = React.useState(true);
-
-  // Share Dialog State
-  const [isShareDialogOpen, setIsShareDialogOpen] = React.useState(false);
-  const [shareWithFilters, setShareWithFilters] = React.useState(true);
+  // Unified Report State
+  const [isUnifiedReportOpen, setIsUnifiedReportOpen] = React.useState(false);
+  const [isReportMinimized, setIsReportMinimized] = React.useState(false);
+  const [isDownloadWidgetCollapsed, setIsDownloadWidgetCollapsed] = React.useState(false);
+  const [reportTab, setReportTab] = React.useState<'generate' | 'downloads'>('generate');
+  const [reportMode, setReportMode] = React.useState<'export' | 'share'>('export');
+  const [reportConfig, setReportConfig] = React.useState({
+    format: 'pdf' as 'pdf' | 'csv' | 'link',
+    includeFilters: true
+  });
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [generationProgress, setGenerationProgress] = React.useState(0);
   const [shareLink, setShareLink] = React.useState('');
+
+  // Download History State
+  interface DownloadItem {
+    id: string;
+    fileName: string;
+    format: 'pdf' | 'csv' | 'link';
+    status: 'downloading' | 'completed' | 'error';
+    progress: number;
+    timestamp: Date;
+    surveys: string[];
+    filterApplied: boolean;
+  }
+  const [downloadHistory, setDownloadHistory] = React.useState<DownloadItem[]>([]);
 
   // questions Tab State
   const [selectedQuestionDimensions, setSelectedQuestionDimensions] = React.useState<string[]>(() => {
@@ -1243,7 +1290,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     const positivePercentage = baseDistItem?.segments?.find(s => s.tone === 'positive')?.percentage || 0;
     return {
       label: baseColumn.label,
-      value: isNoResponses ? 'Sin respuestas' : `${formatPercentage(positivePercentage)}`,
+      value: isNoResponses ? 'Muestra insuficiente' : `${formatPercentage(positivePercentage)}`,
       isBase: true,
       noResponses: isNoResponses
     };
@@ -1255,9 +1302,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     
     return {
       label: c.label.charAt(0).toUpperCase() + c.label.slice(1).toLowerCase(),
-      value: isNoResponses ? 'Sin respuestas' : `${formatPercentage(c.value)}%`,
+      value: isNoResponses ? 'Muestra insuficiente' : `${formatPercentage(c.value)}%`,
       delta: isNoResponses ? undefined : (c.delta !== undefined ? Number(c.delta.toFixed(1)) : undefined),
-      deltaLabel: isNoResponses ? 'Sin respuestas' : (!isSignificant ? 'Sin variación relevante' : undefined),
+      deltaLabel: isNoResponses ? 'Muestra insuficiente' : (!isSignificant ? 'Sin variación relevante' : undefined),
       tone: isNoResponses || !isSignificant ? 'neutral' as const : (c.trend === 'up' ? 'positive' as const : 'negative' as const)
     };
   }), [resumenFavData, type]);
@@ -1274,10 +1321,10 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
             return {
         id: `fav-res-period-${index}`,
         label: item.period,
-        value: hasNoResponses ? 'sin respuestas' : formatPercentage(currentVal),
+        value: hasNoResponses ? 'Muestra insuficiente' : formatPercentage(currentVal),
         total: item.total,
         delta: delta,
-        deltaLabel: hasNoResponses ? 'sin respuestas' : undefined,
+        deltaLabel: hasNoResponses ? 'Muestra insuficiente' : undefined,
         deltaTone: delta === undefined ? undefined : (delta > 0 ? 'positive' as const : delta < 0 ? 'negative' as const : 'neutral' as const),
         isBase: item.isBase,
         segments: (item.segments || []).map(s => ({ ...s, percentage: formatPercentage(s.percentage), tone: s.tone as any }))
@@ -1300,7 +1347,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     const positivePercentage = baseDistItem?.segments?.find(s => s.tone === 'positive')?.percentage || 0;
     return { 
       label: baseColumn.label, 
-      value: isNoResponses ? 'Sin respuestas' : `${formatPercentage(positivePercentage)}`, 
+      value: isNoResponses ? 'Muestra insuficiente' : `${formatPercentage(positivePercentage)}`, 
       isBase: true,
       noResponses: isNoResponses
     };
@@ -1312,9 +1359,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     
     return {
       label: c.label.charAt(0).toUpperCase() + c.label.slice(1).toLowerCase(),
-      value: isNoResponses ? 'Sin respuestas' : `${formatPercentage(c.value)}%`,
+      value: isNoResponses ? 'Muestra insuficiente' : `${formatPercentage(c.value)}%`,
       delta: isNoResponses ? undefined : (c.delta !== undefined ? Number(c.delta.toFixed(1)) : undefined),
-      deltaLabel: isNoResponses ? 'Sin respuestas' : (!isSignificant ? 'Sin variación relevante' : undefined),
+      deltaLabel: isNoResponses ? 'Muestra insuficiente' : (!isSignificant ? 'Sin variación relevante' : undefined),
       tone: isNoResponses || !isSignificant ? 'neutral' as const : (c.trend === 'up' ? 'positive' as const : 'negative' as const)
     };
   }), [resumenPartData, type]);
@@ -1330,10 +1377,10 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
             return {
         id: `part-res-period-${index}`,
         label: item.period,
-        value: hasNoResponses ? 'sin respuestas' : formatPercentage(currentVal),
+        value: hasNoResponses ? 'Muestra insuficiente' : formatPercentage(currentVal),
         total: item.total,
         delta,
-        deltaLabel: hasNoResponses ? 'sin respuestas' : undefined,
+        deltaLabel: hasNoResponses ? 'Muestra insuficiente' : undefined,
         deltaTone: delta === undefined ? undefined : (delta > 0 ? 'positive' as const : delta < 0 ? 'negative' as const : 'neutral' as const),
         isBase: item.isBase,
         segments: (item.segments || []).map(s => ({ ...s, percentage: formatPercentage(s.percentage), tone: s.tone as any }))
@@ -1409,7 +1456,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   const favFooterItems = React.useMemo(() => {
         return (favData?.comparisons || []).map((c: any) => ({
       label: c.label,
-      value: c.noData ? 'Sin respuestas' : `${formatPercentage(c.value)}%`,
+      value: c.noData ? 'Muestra insuficiente' : `${formatPercentage(c.value)}%`,
       delta: c.noData ? undefined : (c.delta !== undefined ? `${c.delta >= 0 ? '+' : ''}${c.delta}%` : undefined),
       tone: c.noData ? 'neutral' : (c.trend === 'up' ? 'positive' : c.trend === 'down' ? 'negative' : 'neutral')
     }));
@@ -1575,7 +1622,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         total: isNoResponses ? 0 : data.total,
         delta: index > 0 && !isNoResponses ? delta : undefined,
         deltaTone: delta >= 0 ? 'positive' as const : 'negative' as const,
-        emptyMessage: isNoResponses ? "Sin respuestas" : undefined
+        emptyMessage: isNoResponses ? "Muestra insuficiente con filtros actuales" : undefined
       };
       return item;
     });
@@ -1647,20 +1694,105 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     tabFilters,
   ]);
 
-  // Export Handlers
-  const handleExport = React.useCallback(() => {
-    if (type === 'Cultura') {
+  // Helper to get display label for a survey
+  const getDisplayLabel = (survey: any): string => {
+    return survey?.name || 'Unknown Survey';
+  };
+
+  // Share Link Generation
+  const generateShareLink = React.useCallback(() => {
+    const baseUrl = window.location.origin + window.location.pathname;
+    const params = new URLSearchParams();
+    
+    params.set('base', baseSurvey || '');
+    params.set('compare', comparisonSurveys.join(','));
+    params.set('type', type);
+    
+    if (reportConfig.includeFilters) {
+      // Encode current tab filters
+      const encodedFilters = btoa(JSON.stringify(tabFilters));
+      params.set('filters', encodedFilters);
+    }
+    
+    return `${baseUrl}?${params.toString()}`;
+  }, [baseSurvey, comparisonSurveys, type, reportConfig.includeFilters, tabFilters]);
+
+  // Unified Report Handler
+  const handleGenerateReport = React.useCallback(() => {
+    // Immediate validation for Cultura
+    if (type === 'Cultura' && (reportConfig.format === 'pdf' || reportConfig.format === 'csv')) {
       toast.error("¡Vaya! Hubo un problema al generar tu reporte de Cultura. Estamos trabajando para solucionarlo, por favor intenta descargarlo más tarde.");
-      setIsExportDialogOpen(false);
+      setIsUnifiedReportOpen(false);
       return;
     }
 
-    if (exportFormat === 'pdf') {
-      exportToPDF();
-    } else {
-      exportToCSV();
-    }
-  }, [exportFormat, type]);
+    // Create download item
+    const downloadId = `download-${Date.now()}`;
+    const fileName = `dashboard-comparativo-${new Date().toISOString().split('T')[0]}.${reportConfig.format === 'link' ? 'url' : reportConfig.format}`;
+    const newDownload: DownloadItem = {
+      id: downloadId,
+      fileName,
+      format: reportConfig.format as 'pdf' | 'csv' | 'link',
+      status: 'downloading',
+      progress: 0,
+      timestamp: new Date(),
+      surveys: [baseSurvey?.name, ...comparisonSurveys.map(s => s.name)].filter(Boolean) as string[],
+      filterApplied: reportConfig.includeFilters
+    };
+
+    // Add to download history and switch to downloads tab
+    setDownloadHistory(prev => [newDownload, ...prev]);
+    setReportTab('downloads');
+
+    // Start generation process
+    setIsGenerating(true);
+    setGenerationProgress(0);
+
+    // Simulate progress
+    const intervals = [
+      { time: 1000, progress: 10 },
+      { time: 3000, progress: 35 },
+      { time: 5500, progress: 65 },
+      { time: 8000, progress: 85 },
+      { time: 10000, progress: 100 }
+    ];
+
+    intervals.forEach(({ time, progress }) => {
+      setTimeout(() => {
+        setGenerationProgress(progress);
+
+        // Update download progress
+        setDownloadHistory(prev =>
+          prev.map(item => item.id === downloadId ? { ...item, progress } : item)
+        );
+
+        if (progress === 100) {
+          setTimeout(() => {
+            setIsGenerating(false);
+
+            // Mark download as completed
+            setDownloadHistory(prev =>
+              prev.map(item => item.id === downloadId ? { ...item, status: 'completed' } : item)
+            );
+
+            if (reportConfig.format === 'link') {
+              const link = generateShareLink();
+              setShareLink(link);
+              navigator.clipboard.writeText(link).then(() => {
+                toast.success("¡Enlace generado y copiado al portapapeles!");
+              });
+            } else if (reportConfig.format === 'pdf') {
+              exportToPDF();
+              toast.success("¡Reporte PDF generado con éxito!");
+            } else {
+              exportToCSV();
+              toast.success("¡Reporte CSV generado con éxito!");
+            }
+          }, 400);
+        }
+      }, time);
+    });
+  }, [reportConfig, type, generateShareLink, baseSurvey, comparisonSurveys]);
 
   const exportToPDF = () => {
     // Create CSV content for PDF (simplified - in production, use a PDF library like jsPDF)
@@ -1693,7 +1825,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     }
 
     // Add filters if applicable
-    if (exportWithFilters) {
+    if (reportConfig.includeFilters) {
       const dimTabId = dimensionsView === 'heatmap' ? 'dimensionesHeatmap' : 'dimensionesTable';
       const tabIdMap: Record<string, string> = {
         'resumen': 'resumen',
@@ -1722,9 +1854,6 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-
-    toast.success(`¡${exportFormat.toUpperCase()} descargado correctamente!`);
-    setIsExportDialogOpen(false);
   };
 
   const exportToCSV = () => {
@@ -1757,7 +1886,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     }
 
     // Add filter info if applicable
-    if (exportWithFilters) {
+    if (reportConfig.includeFilters) {
       const dimTabId = dimensionsView === 'heatmap' ? 'dimensionesHeatmap' : 'dimensionesTable';
       const tabIdMap: Record<string, string> = {
         'resumen': 'resumen',
@@ -1775,60 +1904,16 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       });
     }
 
-    // Create blob and download
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    toast.success(`¡${exportFormat.toUpperCase()} descargado correctamente!`);
-    setIsExportDialogOpen(false);
   };
-
-  // Generate share link with filters
-  const generateShareLink = React.useCallback(() => {
-    const baseUrl = window.location.origin + window.location.pathname;
-    const params = new URLSearchParams();
-
-    // Add surveys
-    params.set('baseId', baseId);
-    if (comparativeIds && comparativeIds.length > 0) {
-      params.set('comparativeIds', comparativeIds.join(','));
-    }
-
-    // Add current tab
-    params.set('tab', activeTab);
-
-    // Add filters if applicable
-    if (shareWithFilters) {
-      const dimTabId = dimensionsView === 'heatmap' ? 'dimensionesHeatmap' : 'dimensionesTable';
-      const tabIdMap: Record<string, string> = {
-        'resumen': 'resumen',
-        'dimensiones': dimTabId,
-        'preguntas': 'preguntas',
-        'sentimiento': 'participacion',
-        'comentarios': 'comentarios'
-      };
-      const currentTabId = tabIdMap[activeTab] || 'resumen';
-
-      // Get filters for all sections
-      const allTabIds = ['resumen', 'dimensionesTable', 'dimensionesHeatmap', 'preguntas', 'comentarios'];
-      allTabIds.forEach((tabId) => {
-        const sectionFilters = getSectionFilters(tabId);
-        if (Object.keys(sectionFilters).length > 0) {
-          params.set(`filters_${tabId}`, JSON.stringify(sectionFilters));
-        }
-      });
-    }
-
-    const fullUrl = `${baseUrl}?${params.toString()}`;
-    return fullUrl;
-  }, [baseId, comparativeIds, activeTab, shareWithFilters, dimensionsView, getSectionFilters]);
 
   const renderTableLegend = (context: 'dimension' | 'question' | 'sentiment' = 'dimension') => (
     <div className="flex items-center gap-5 py-4 border-b border-border/20 mb-6 flex-wrap">
@@ -1914,13 +1999,10 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         <div className="flex items-center gap-3">
           <Button
             onClick={() => {
-              if (type === 'Cultura') {
-                toast.error("¡Ups! Tuvimos un pequeño problema al generar el enlace de compartir. Por favor, intenta de nuevo en unos minutos.");
-              } else {
-                setShareWithFilters(true);
-                setShareLink('');
-                setIsShareDialogOpen(true);
-              }
+              setReportMode('share');
+              setReportTab('generate');
+              setReportConfig(prev => ({ ...prev, format: 'link' }));
+              setIsUnifiedReportOpen(true);
             }}
             variant="ghost"
             size="sm"
@@ -1930,7 +2012,12 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
             <span>Compartir</span>
           </Button>
           <Button
-            onClick={() => setIsExportDialogOpen(true)}
+            onClick={() => {
+              setReportMode('export');
+              setReportTab('generate');
+              setReportConfig(prev => ({ ...prev, format: 'pdf' }));
+              setIsUnifiedReportOpen(true);
+            }}
             variant="outline"
             size="sm"
             className="h-11 px-6 gap-2.5 text-xs font-bold tracking-tight text-brand border-brand/20 hover:bg-primary/5 rounded-xl shadow-sm transition-all active:scale-95"
@@ -2198,6 +2285,18 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
           <div className="flex items-center gap-3">
             <div className="h-10 w-1 bg-brand rounded-full" />
             <h2 className="text-xl font-bold text-text-primary tracking-tight">Resumen Ejecutivo</h2>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-text-secondary/40 cursor-help hover:text-brand transition-colors" />
+                </TooltipTrigger>
+                <TooltipContent className="bg-surface border border-border/40 shadow-premium p-4 rounded-2xl max-w-[280px]">
+                  <p className="text-xs font-semibold leading-relaxed text-text-primary">
+                    Esta síntesis generada por IA integra los resultados del comparativo considerando tus filtros activos. Si la muestra es reducida por segmentaciones muy específicas, el análisis se enfocará solo en las tendencias más significativas del grupo seleccionado.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           <Button
@@ -2279,7 +2378,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                           </div>
                           <div className="text-3xl font-bold text-brand">
                             {resumenBaseFavItem.value}
-                            {resumenBaseFavItem.value !== 'Sin respuestas' && '%'}
+                            {resumenBaseFavItem.value !== 'Muestra insuficiente' && '%'}
                           </div>
                         </div>
                       ) : null}
@@ -2368,7 +2467,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                         </div>
                         <div className="text-3xl font-bold text-brand">
                           {resumenBasePartItem.value}
-                          {resumenBasePartItem.value !== 'Sin respuestas' && '%'}
+                          {resumenBasePartItem.value !== 'Muestra insuficiente' && '%'}
                         </div>
                       </div>
                     ) : null}
@@ -3855,7 +3954,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                               <Tooltip>
                                                 <TooltipTrigger asChild>
                                                   <span className="text-[10px] font-bold text-text-secondary/50 uppercase tracking-wider cursor-help bg-muted/30 px-1.5 py-0.5 rounded border border-border/10 transition-colors hover:bg-muted/50">
-                                                    Sin Respuestas
+                                                    Muestra insuficiente
                                                   </span>
                                                 </TooltipTrigger>
                                                 <TooltipContent className="bg-surface border border-border/40 shadow-premium p-3 rounded-xl max-w-[220px]">
@@ -3944,8 +4043,16 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                             ))
                           ) : (
                             <TableRow>
-                              <TableCell colSpan={7} className="h-32 text-center text-text-secondary/40 font-medium">
-                                No hay datos de sentimiento que coincidan con la selección
+                              <TableCell colSpan={7} className="h-48 text-center px-12">
+                                <div className="flex flex-col items-center gap-3">
+                                  <div className="w-12 h-12 rounded-full bg-muted/20 flex items-center justify-center mb-1">
+                                    <MessageSquare className="h-5 w-5 text-text-secondary/30" />
+                                  </div>
+                                  <p className="text-sm font-bold text-text-primary tracking-tight">Muestra insuficiente con filtros actuales</p>
+                                  <p className="text-xs font-medium text-text-secondary/60 max-w-[280px] mx-auto leading-relaxed">
+                                    No se encontraron comentarios para los filtros seleccionados. Intenta ampliar la búsqueda demográfica o cambiar de dimensión.
+                                  </p>
+                                </div>
                               </TableCell>
                             </TableRow>
                           )}
@@ -3965,11 +4072,21 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                   <CardHeader className="pb-4 bg-gradient-to-r from-brand/5 to-transparent border-b border-border/20">
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 rounded-lg bg-brand/10">
+                      <div className="flex items-center gap-3">
                         <Sparkles className="h-4 w-4 text-brand" />
-                      </div>
-                      <div>
                         <h2 className="text-lg font-bold text-text-brand tracking-tight">Resumen Ejecutivo</h2>
-                        <p className="text-xs text-text-secondary/60 font-medium mt-0.5">Análisis integrado basado en IA</p>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3.5 w-3.5 text-text-secondary/40 cursor-help hover:text-brand transition-colors" />
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-surface border border-border/40 shadow-premium p-4 rounded-2xl max-w-[280px]">
+                            <p className="text-xs font-semibold leading-relaxed text-text-primary">
+                              Esta síntesis generada por IA integra los resultados del comparativo considerando tus filtros activos. Si la muestra es reducida por segmentaciones muy específicas, el análisis se enfocará solo en las tendencias más significativas del grupo seleccionado.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className="text-xs text-text-secondary/60 font-medium mt-0.5 ml-7">Análisis integrado basado en IA</p>
                       </div>
                     </div>
                   </CardHeader>
@@ -3982,10 +4099,20 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
                 {/* Hallazgos de Alto Impacto */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3 px-1">
-                    <div className="h-4 w-1 bg-brand rounded-full" />
-                    <h3 className="text-sm font-bold text-text-brand tracking-tight">Hallazgos de Alto Impacto</h3>
-                  </div>
+                    <div className="flex items-center gap-3 px-1">
+                      <div className="h-4 w-1 bg-brand rounded-full" />
+                      <h3 className="text-sm font-bold text-text-brand tracking-tight">Hallazgos de Alto Impacto</h3>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3.5 w-3.5 text-text-secondary/40 cursor-help hover:text-brand transition-colors" />
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-surface border border-border/40 shadow-premium p-4 rounded-2xl max-w-[280px]">
+                          <p className="text-xs font-semibold leading-relaxed text-text-primary">
+                            Detecta automáticamente variaciones críticas en dimensiones y preguntas para el segmento seleccionado. Estos hallazgos son dinámicos: cambiar los filtros demográficos revelará retos u oportunidades específicas de cada población.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                     {aiInsightsSource.highImpactFindings.map((finding) => (
                       <AIInsightCard
@@ -4006,6 +4133,16 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                   <div className="flex items-center gap-3 px-1">
                     <div className="h-4 w-1 bg-brand rounded-full" />
                     <h3 className="text-sm font-bold text-text-brand tracking-tight">Predicción y Tendencias</h3>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 text-text-secondary/40 cursor-help hover:text-brand transition-colors" />
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-surface border border-border/40 shadow-premium p-4 rounded-2xl max-w-[280px]">
+                        <p className="text-xs font-semibold leading-relaxed text-text-primary">
+                          Proyección estadística que estima el comportamiento futuro basándose en la inercia de tus datos históricos y filtros actuales. Nota: segmentar por grupos muy pequeños puede inhabilitar la proyección por falta de representatividad.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                   <Card className="border border-border/40 bg-surface shadow-xl shadow-border/[0.02] rounded-[40px] overflow-hidden">
                     <CardHeader className="pb-3 bg-gradient-to-r from-brand/5 to-transparent border-b border-border/20">
@@ -4048,7 +4185,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                         <CardHeader className="pb-4">
                           <h4 className="font-semibold text-text-brand">{scenario.label}</h4>
                           <p className="text-2xl font-bold text-text-primary mt-2">
-                            {scenario.predicted !== null ? `${(scenario.predicted || 0).toFixed(1)}%` : <span className="text-text-secondary/40">Sin respuestas</span>}
+                            {scenario.predicted !== null ? `${(scenario.predicted || 0).toFixed(1)}%` : <span className="text-text-secondary/40 text-sm">Muestra insuficiente con filtros actuales</span>}
                           </p>
                         </CardHeader>
                         <CardContent className="space-y-3">
@@ -4511,290 +4648,527 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         </SheetContent>
       </Sheet>
 
-      {/* Export Dialog */}
-      <Sheet open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
-        <SheetContent aria-describedby={undefined} showCloseButton={false} side="right" className="w-[460px] sm:max-w-[460px] h-full p-0 border-l border-border/10 bg-background overflow-hidden flex flex-col shadow-2xl">
+      {/* Unified Report Drawer */}
+      <Sheet open={isUnifiedReportOpen} onOpenChange={setIsUnifiedReportOpen}>
+        <SheetContent aria-describedby={undefined} showCloseButton={false} side="right" className="w-full sm:w-[40vw] min-w-[500px] h-full p-0 border-l border-border/10 bg-background overflow-hidden flex flex-col shadow-2xl">
           <div className="flex flex-col h-full">
-            {/* Header */}
-            <div className="p-6 pb-4 bg-white border-b border-border/10 shrink-0">
-              <div className="flex items-center justify-between gap-4">
+            {/* Header with Tabs */}
+            <div className="p-5 pb-0 bg-background border-b border-border/10 shrink-0">
+              <div className="flex items-center justify-between gap-4 mb-5">
                 <div className="flex flex-col gap-0.5 flex-1">
                   <SheetTitle className="text-lg font-bold tracking-tight text-text-primary">
-                    Exportar Informe
+                    Comparativo de encuestas
                   </SheetTitle>
-                  <SheetDescription className="text-sm font-bold text-text-secondary-foreground">
-                    Elige el formato y opciones de exportación
+                  <SheetDescription className="text-sm font-medium text-text-secondary-foreground">
+                    {reportMode === 'share' 
+                      ? 'Obtén un enlace para que otros vean este análisis' 
+                      : 'Configura y descarga tu reporte del comparativo'}
                   </SheetDescription>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setIsExportDialogOpen(false)}
+                  onClick={() => setIsUnifiedReportOpen(false)}
                   className="rounded-xl hover:bg-muted/10 h-10 w-10 transition-all shrink-0"
                 >
                   <X className="h-5 w-5 text-text-secondary-foreground" />
                 </Button>
               </div>
+
+              {/* Tabs Experience */}
+              <div className="flex gap-8 relative border-b border-transparent">
+                <button
+                  onClick={() => setReportTab('generate')}
+                  className={cn(
+                    "pb-2.5 text-sm font-bold transition-all relative",
+                    reportTab === 'generate' ? "text-brand" : "text-text-secondary hover:text-text-primary"
+                  )}
+                >
+                  Generar reporte
+                  {reportTab === 'generate' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
+                  )}
+                </button>
+                <button
+                  onClick={() => setReportTab('downloads')}
+                  className={cn(
+                    "pb-2.5 text-sm font-bold transition-all relative",
+                    reportTab === 'downloads' ? "text-brand" : "text-text-secondary hover:text-text-primary"
+                  )}
+                >
+                  Descargas
+                  {reportTab === 'downloads' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
+                  )}
+                </button>
+              </div>
             </div>
 
-            {/* Content */}
+            {/* Content Area */}
             <ScrollArea className="flex-1">
-              <div className="p-6 space-y-6">
-                {/* Format Selection */}
-                <div className="space-y-3">
-                  <p className="text-sm font-bold text-text-primary">Formato de exportación</p>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-3 p-3 border border-border/20 rounded-xl cursor-pointer hover:bg-muted/5 transition-all" htmlFor="format-pdf">
-                      <input
-                        type="radio"
-                        id="format-pdf"
-                        name="exportFormat"
-                        value="pdf"
-                        checked={exportFormat === 'pdf'}
-                        onChange={(e) => setExportFormat(e.target.value as 'pdf' | 'csv')}
-                        className="h-4 w-4 accent-brand"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-text-primary">PDF</p>
-                        <p className="text-xs text-text-secondary">Documento formateado con gráficos y tablas</p>
-                      </div>
-                    </label>
-                    <label className="flex items-center gap-3 p-3 border border-border/20 rounded-xl cursor-pointer hover:bg-muted/5 transition-all" htmlFor="format-csv">
-                      <input
-                        type="radio"
-                        id="format-csv"
-                        name="exportFormat"
-                        value="csv"
-                        checked={exportFormat === 'csv'}
-                        onChange={(e) => setExportFormat(e.target.value as 'pdf' | 'csv')}
-                        className="h-4 w-4 accent-brand"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-text-primary">CSV</p>
-                        <p className="text-xs text-text-secondary">Datos en formato de tabla para análisis</p>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Filter Application */}
-                <div className="space-y-3 pb-4 border-b border-border/10">
-                  <p className="text-sm font-bold text-text-primary">Opciones adicionales</p>
-                  <label className="flex items-center gap-3 p-3 border border-border/20 rounded-xl cursor-pointer hover:bg-muted/5 transition-all" htmlFor="apply-filters">
-                    <input
-                      type="checkbox"
-                      id="apply-filters"
-                      checked={exportWithFilters}
-                      onChange={(e) => setExportWithFilters(e.target.checked)}
-                      className="h-4 w-4 accent-brand rounded"
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-text-primary">Aplicar filtros actuales</p>
-                      <p className="text-xs text-text-secondary">Incluye los filtros demográficos y segmentaciones aplicadas</p>
-                    </div>
-                  </label>
-                </div>
-
-                {/* Active Filters Info - All Sections */}
-                {exportWithFilters && (() => {
-                  const allTabIds: Array<{ id: string; label: string }> = [
-                    { id: 'resumen', label: 'Resumen Ejecutivo' },
-                    { id: 'dimensionesTable', label: 'Dimensiones Tabla' },
-                    { id: 'dimensionesHeatmap', label: 'Dimensiones Heatmap' },
-                    { id: 'preguntas', label: 'Preguntas' },
-                    { id: 'comentarios', label: 'Comentarios' }
-                  ];
-
-                  return (
-                    <div className="p-4 bg-brand/5 border border-brand/20 rounded-xl space-y-3 flex flex-col">
-                      <p className="text-xs font-bold text-brand">Filtros activos por sección:</p>
-                      <p className="text-[10px] text-text-secondary/60">Se aplicarán estos filtros al exportar</p>
-
-                      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                        {allTabIds.map(({ id, label }) => {
-                          const sectionFilters = getSectionFilters(id);
-                          const hasFilters = Object.keys(sectionFilters).length > 0;
-
-                          return (
-                            <div key={id} className="space-y-1.5">
-                              <p className="text-xs font-semibold text-text-primary">{label}:</p>
-                              {hasFilters ? (
-                                <div className="ml-3 space-y-1 text-xs text-text-secondary">
-                                  {Object.entries(sectionFilters).map(([category, values]) => (
-                                    <div key={category} className="flex flex-col gap-0.5">
-                                      <p className="text-text-secondary-foreground">{category}:</p>
-                                      <p className="ml-2 text-text-secondary/80">
-                                        {Array.isArray(values) ? values.join(', ') : values}
-                                      </p>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="ml-3 text-[10px] text-text-secondary/60 italic">Sin filtros aplicados</p>
-                              )}
+              <div className="p-5 space-y-5">
+                {reportTab === 'generate' ? (
+                  <div className="space-y-5">
+                    {/* Format Selection */}
+                    <div className="space-y-3">
+                      <p className="text-sm font-bold text-text-primary">
+                        {reportMode === 'share' ? 'Opción de compartido' : 'Tipo de formato'}
+                      </p>
+                      <div className="space-y-2">
+                        {[
+                          { id: 'pdf', label: 'Documento PDF', desc: 'Análisis visual completo con gráficos', icon: FileText, mode: 'export' },
+                          { id: 'csv', label: 'Datos CSV (Excel)', desc: 'Base de datos para análisis externo', icon: FileCode, mode: 'export' },
+                          { id: 'link', label: 'Enlace para compartir', desc: 'Acceso directo para otros usuarios', icon: Link, mode: 'share' }
+                        ]
+                        .filter(f => f.mode === reportMode)
+                        .map((format) => (
+                          <label 
+                            key={format.id}
+                            className={cn(
+                              "flex items-center justify-between gap-4 p-4 border rounded-2xl cursor-pointer transition-all",
+                              reportConfig.format === format.id 
+                                ? "border-brand bg-brand/5 shadow-md shadow-brand/5" 
+                                : "border-border/10 hover:bg-muted/5"
+                            )} 
+                            htmlFor={`format-${format.id}`}
+                          >
+                            <div className="flex items-center gap-4 flex-1">
+                              <div className={cn(
+                                "h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 transition-all",
+                                reportConfig.format === format.id ? "bg-brand/10" : "bg-muted/5"
+                              )}>
+                                <format.icon className={cn("h-6 w-6", reportConfig.format === format.id ? "text-brand" : "text-text-secondary/40")} />
+                              </div>
+                              <div className="flex flex-col gap-0.5">
+                                <p className="text-sm font-bold text-text-primary">{format.label}</p>
+                                <p className="text-xs text-text-secondary/60 leading-relaxed">{format.desc}</p>
+                              </div>
                             </div>
-                          );
-                        })}
+                            <input
+                              type="radio"
+                              id={`format-${format.id}`}
+                              name="reportFormat"
+                              value={format.id}
+                              checked={reportConfig.format === format.id}
+                              onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value as any }))}
+                              className="h-5 w-5 accent-brand shrink-0 cursor-pointer"
+                            />
+                          </label>
+                        ))}
                       </div>
                     </div>
-                  );
-                })()}
 
+                    {/* Options */}
+                    <div className="space-y-2 pb-3 border-b border-border/10">
+                      <p className="text-sm font-bold text-text-primary">Personalización</p>
+                      <label className="flex items-center gap-3 p-3 border border-border/20 rounded-xl cursor-pointer hover:bg-muted/5 transition-all" htmlFor="inc-filters">
+                        <input
+                          type="checkbox"
+                          id="inc-filters"
+                          checked={reportConfig.includeFilters}
+                          onChange={(e) => setReportConfig(prev => ({ ...prev, includeFilters: e.target.checked }))}
+                          className="h-4 w-4 accent-brand rounded"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-text-primary">Respetar filtros actuales</p>
+                          <p className="text-xs text-text-secondary">Se aplicarán los filtros de segmentación activos</p>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Filter Summary Visualizer */}
+                    {reportConfig.includeFilters && (
+                      <div className="p-4 bg-surface-subtle border border-border/10 rounded-2xl space-y-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-bold text-text-primary/40 uppercase tracking-wider">Filtros que se aplicarán</p>
+                          <div className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
+                        </div>
+                        <div className="space-y-3 max-h-[40vh] min-h-[120px] overflow-y-auto pr-2 custom-scrollbar">
+                          {['resumen', 'dimensionesTable', 'dimensionesHeatmap', 'preguntas', 'comentarios'].map(id => {
+                            const sectionLabel = {
+                              resumen: 'Resumen Ejecutivo',
+                              dimensionesTable: 'Dimensiones (Tabla)',
+                              dimensionesHeatmap: 'Dimensiones (Heatmap)',
+                              preguntas: 'Preguntas',
+                              comentarios: 'Comentarios'
+                            }[id];
+                            const filters = getSectionFilters(id);
+                            const hasFilters = Object.keys(filters).length > 0;
+
+                            return (
+                              <div key={id} className="space-y-1.5 pb-2 border-b border-border/5 last:border-0 last:pb-0">
+                                <p className="text-xs font-bold text-text-primary/80">{sectionLabel}</p>
+                                {hasFilters ? (
+                                  <div className="grid grid-cols-1 gap-1">
+                                    {Object.entries(filters).map(([cat, val]) => (
+                                      <div key={cat} className="flex items-start gap-2 text-[11px]">
+                                        <span className="text-text-secondary shrink-0">{cat}:</span>
+                                        <span className="text-text-primary font-medium break-words">
+                                          {Array.isArray(val) ? val.join(', ') : val}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-text-secondary/50 italic">Sin filtros específicos</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Downloads History Tab */
+                  <div className="space-y-5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold text-text-primary">Lista de descargas</p>
+                      <Badge variant="outline" className="text-[10px] font-bold text-text-secondary/30 border-border/10 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                        Últimos 7 días
+                      </Badge>
+                    </div>
+
+                    {downloadHistory.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center pt-20 space-y-4 text-center">
+                        <div className="h-16 w-16 rounded-full bg-muted/5 flex items-center justify-center">
+                          <History className="h-8 w-8 text-text-secondary/20" />
+                        </div>
+                        <div className="space-y-1 px-8">
+                          <p className="text-sm font-bold text-text-primary">Sin descargas recientes</p>
+                          <p className="text-xs text-text-secondary">Tus comparativos generados aparecerán aquí para acceso rápido.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border/5">
+                        {downloadHistory.map((download) => (
+                          <div key={download.id} className="py-4 first:pt-0">
+                            <div className="flex items-center gap-3">
+                              {/* Status Icon */}
+                              <div className="shrink-0">
+                                {download.status === 'downloading' ? (
+                                  <div className="relative h-8 w-8 flex items-center justify-center">
+                                    <CircularProgress progress={download.progress} size={32} strokeWidth={2.5} />
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <div className="h-1 w-1 rounded-full bg-brand animate-pulse" />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className={cn(
+                                    "h-8 w-8 rounded-full flex items-center justify-center transition-all",
+                                    download.status === 'completed' ? "bg-status-positive" : "bg-status-negative"
+                                  )}>
+                                    {download.status === 'completed' ? (
+                                      <Check className="h-4 w-4 text-white" />
+                                    ) : (
+                                      <X className="h-4 w-4 text-white" />
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* File Info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <p className="text-sm font-bold text-text-primary truncate pr-4">{download.fileName}</p>
+                                  <div className="shrink-0 text-right">
+                                    {download.status === 'downloading' ? (
+                                      <span className="text-sm font-bold text-brand">{download.progress}%</span>
+                                    ) : download.status === 'completed' ? (
+                                      <button className="text-sm font-bold text-brand hover:underline transition-all active:scale-95">
+                                        Descargar
+                                      </button>
+                                    ) : (
+                                      <span className="text-sm font-bold text-status-negative">Error</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <p className="text-xs text-text-secondary/60 font-medium">
+                                  {download.status === 'downloading' 
+                                    ? `Descargando ${download.surveys.length} encuestas` 
+                                    : `Número de encuestas comparadas: ${download.surveys.length}`}
+                                </p>
+                                
+                                {/* Progress Bar for Downloading */}
+                                {download.status === 'downloading' && (
+                                  <div className="mt-3 w-full bg-muted/10 rounded-full h-1 overflow-hidden">
+                                    <div
+                                      className="h-full bg-brand rounded-full transition-all duration-500"
+                                      style={{ width: `${download.progress}%` }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </ScrollArea>
 
-            {/* Footer Actions */}
-            <div className="px-6 py-6 bg-white border-t border-border/10 shrink-0 shadow-[0_-12px_40px_rgba(0,0,0,0.12)] relative z-30 space-y-3">
-              <Button
-                onClick={() => handleExport()}
-                className="w-full h-12 bg-brand hover:bg-brand/90 text-text-inverse font-bold tracking-tight rounded-2xl shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Descargar {exportFormat.toUpperCase()}
-              </Button>
-              <Button
-                onClick={() => setIsExportDialogOpen(false)}
-                variant="outline"
-                className="w-full h-12 border-border/20 text-text-primary font-bold tracking-tight rounded-2xl transition-all"
-              >
-                Cancelar
-              </Button>
+            {/* Footer with Generation Button */}
+            <div className="p-5 bg-background border-t border-border/10 shrink-0 shadow-[0_-8px_32px_rgba(0,0,0,0.05)] space-y-3">
+              {reportTab === 'downloads' && downloadHistory.some(d => d.status === 'downloading') && (
+                <div className="bg-brand/5 border border-brand/20 p-3 rounded-xl flex gap-3 items-start animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <Info className="h-4 w-4 text-brand shrink-0 mt-0.5" />
+                  <p className="text-xs text-brand-foreground/80 font-medium leading-tight">
+                    La descarga está en progreso. Puedes seguir generando reportes o minimizar esta ventana.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2">
+                {(isGenerating || reportTab === 'downloads') && (
+                  <Button
+                    onClick={() => {
+                      setIsReportMinimized(true);
+                      setIsUnifiedReportOpen(false);
+                    }}
+                    variant="outline"
+                    className="w-full h-12 border-border/20 hover:bg-muted/5 text-text-primary font-bold tracking-tight rounded-2xl transition-all active:scale-[0.98]"
+                  >
+                    Minimizar y continuar
+                  </Button>
+                )}
+                
+                {reportTab === 'generate' && (
+                  <Button
+                    disabled={isGenerating}
+                    onClick={() => handleGenerateReport()}
+                    className="w-full h-12 bg-brand hover:bg-brand/90 text-text-inverse font-bold tracking-tight rounded-2xl shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Generando...
+                      </>
+                    ) : (
+                      <>
+                        {reportConfig.format === 'link' ? <Link className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                        {reportConfig.format === 'link' ? 'Generar enlace' : `Descargar ${reportConfig.format.toUpperCase()}`}
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </SheetContent>
       </Sheet>
 
-      {/* Share Dialog */}
-      <Sheet open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-        <SheetContent aria-describedby={undefined} showCloseButton={false} side="right" className="w-[460px] sm:max-w-[460px] h-full p-0 border-l border-border/10 bg-background overflow-hidden flex flex-col shadow-2xl">
-          <div className="flex flex-col h-full">
-            {/* Header */}
-            <div className="p-6 pb-4 bg-white border-b border-border/10 shrink-0">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex flex-col gap-0.5 flex-1">
-                  <SheetTitle className="text-lg font-bold tracking-tight text-text-primary">
-                    Compartir Análisis
-                  </SheetTitle>
-                  <SheetDescription className="text-sm font-bold text-text-secondary-foreground">
-                    Copia el enlace para compartir con tu equipo
-                  </SheetDescription>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsShareDialogOpen(false)}
-                  className="rounded-xl hover:bg-muted/10 h-10 w-10 transition-all shrink-0"
-                >
-                  <X className="h-5 w-5 text-text-secondary-foreground" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <ScrollArea className="flex-1">
-              <div className="p-6 space-y-6">
-                {/* Filter Option */}
-                <div className="space-y-3 pb-4 border-b border-border/10">
-                  <p className="text-sm font-bold text-text-primary">Opciones de compartir</p>
-                  <label className="flex items-center gap-3 p-3 border border-border/20 rounded-xl cursor-pointer hover:bg-muted/5 transition-all" htmlFor="share-filters">
-                    <input
-                      type="checkbox"
-                      id="share-filters"
-                      checked={shareWithFilters}
-                      onChange={(e) => {
-                        setShareWithFilters(e.target.checked);
-                        setShareLink('');
-                      }}
-                      className="h-4 w-4 accent-brand rounded"
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-text-primary">Incluir filtros actuales</p>
-                      <p className="text-xs text-text-secondary">El enlace tendrá los mismos filtros aplicados</p>
-                    </div>
-                  </label>
-                </div>
-
-                {/* Active Filters Info */}
-                {shareWithFilters && (() => {
-                  const allTabIds: Array<{ id: string; label: string }> = [
-                    { id: 'resumen', label: 'Resumen Ejecutivo' },
-                    { id: 'dimensionesTable', label: 'Dimensiones Tabla' },
-                    { id: 'dimensionesHeatmap', label: 'Dimensiones Heatmap' },
-                    { id: 'preguntas', label: 'Preguntas' },
-                    { id: 'comentarios', label: 'Comentarios' }
-                  ];
-
-                  return (
-                    <div className="p-4 bg-brand/5 border border-brand/20 rounded-xl space-y-3 flex flex-col">
-                      <p className="text-xs font-bold text-brand">Filtros que se compartirán:</p>
-                      <p className="text-[10px] text-text-secondary/60">Quienes reciban el enlace verán estos filtros aplicados</p>
-
-                      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                        {allTabIds.map(({ id, label }) => {
-                          const sectionFilters = getSectionFilters(id);
-                          const hasFilters = Object.keys(sectionFilters).length > 0;
-
-                          return (
-                            <div key={id} className="space-y-1.5">
-                              <p className="text-xs font-semibold text-text-primary">{label}:</p>
-                              {hasFilters ? (
-                                <div className="ml-3 space-y-1 text-xs text-text-secondary">
-                                  {Object.entries(sectionFilters).map(([category, values]) => (
-                                    <div key={category} className="flex flex-col gap-0.5">
-                                      <p className="text-text-secondary-foreground">{category}:</p>
-                                      <p className="ml-2 text-text-secondary/80">
-                                        {Array.isArray(values) ? values.join(', ') : values}
-                                      </p>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="ml-3 text-[10px] text-text-secondary/60 italic">Sin filtros aplicados</p>
-                              )}
-                            </div>
-                          );
-                        })}
+      {/* Immediate Progress Modal (Small Experience) - Expandable */}
+      {isReportMinimized && downloadHistory.length > 0 && (
+        <div className="fixed bottom-8 right-8 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <div
+            className={cn(
+              "bg-white border border-border/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] w-[320px] overflow-hidden transition-all duration-300",
+              isDownloadWidgetCollapsed ? "p-5" : "p-5"
+            )}
+          >
+            {isDownloadWidgetCollapsed ? (
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <div className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 bg-muted/5 border border-border/5">
+                    {downloadHistory.every(d => d.status === 'completed') ? (
+                      <Check className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <div className="relative h-6 w-6">
+                        <svg className="h-full w-full rotate-[-90deg]">
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            fill="transparent"
+                            className="text-brand/20"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            fill="transparent"
+                            strokeDasharray={62.8}
+                            strokeDashoffset={62.8 - (62.8 * generationProgress) / 100}
+                            className="text-brand transition-all duration-500"
+                          />
+                        </svg>
                       </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Link Display */}
-                <div className="space-y-3">
-                  <p className="text-sm font-bold text-text-primary">Enlace para compartir</p>
-                  <div className="space-y-2 relative">
-                    <div className="p-3 bg-surface-subtle border border-border/20 rounded-xl flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={shareLink || generateShareLink()}
-                        readOnly
-                        className="flex-1 bg-transparent text-xs text-text-secondary outline-none truncate"
-                      />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          const link = shareLink || generateShareLink();
-                          navigator.clipboard.writeText(link).then(() => {
-                            toast.success("¡Enlace copiado al portapapeles!");
-                            setIsShareDialogOpen(false);
-                          });
-                        }}
-                        className="px-3 h-8 text-xs font-bold text-brand hover:bg-brand/10 rounded-lg transition-all"
-                      >
-                        Copiar
-                      </Button>
-                    </div>
-                    <p className="text-[10px] text-text-secondary/60">
-                      Clic en Copiar para copiar el enlace
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-text-primary truncate">
+                      {downloadHistory.every(d => d.status === 'completed')
+                        ? 'Descarga completada'
+                        : (isGenerating ? (reportConfig.format === 'link' ? 'Generando enlace...' : `Preparando ${reportConfig.format.toUpperCase()}...`) : 'Descargas')
+                      }
+                    </p>
+                    <p className="text-xs text-text-secondary mt-0.5">
+                      {downloadHistory.filter(d => d.status === 'downloading').length} en progreso
                     </p>
                   </div>
                 </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => {
+                      setIsUnifiedReportOpen(true);
+                      setIsReportMinimized(false);
+                    }}
+                    className="p-1 hover:bg-muted/5 rounded-lg transition-all"
+                    title="Abrir modal"
+                  >
+                    <ArrowUpRight className="h-4 w-4 text-text-secondary/40" />
+                  </button>
+                  <button
+                    onClick={() => setIsDownloadWidgetCollapsed(false)}
+                    className="p-1 hover:bg-muted/5 rounded-lg transition-all"
+                    title="Expandir widget"
+                  >
+                    <ChevronDown className="h-4 w-4 text-text-secondary/40" />
+                  </button>
+                  <button
+                    onClick={() => setIsReportMinimized(false)}
+                    className="p-1 hover:bg-muted/5 rounded-lg transition-all"
+                    title="Cerrar"
+                  >
+                    <X className="h-4 w-4 text-text-secondary/40" />
+                  </button>
+                </div>
               </div>
-            </ScrollArea>
+            ) : (
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <div className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 bg-muted/5 border border-border/5">
+                    {downloadHistory.every(d => d.status === 'completed') ? (
+                      <Check className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <div className="relative h-6 w-6">
+                        <svg className="h-full w-full rotate-[-90deg]">
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            fill="transparent"
+                            className="text-brand/20"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            fill="transparent"
+                            strokeDasharray={62.8}
+                            strokeDashoffset={62.8 - (62.8 * generationProgress) / 100}
+                            className="text-brand transition-all duration-500"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-text-primary truncate">
+                      {downloadHistory.every(d => d.status === 'completed')
+                        ? 'Descarga completada'
+                        : (isGenerating ? (reportConfig.format === 'link' ? 'Generando enlace...' : `Preparando ${reportConfig.format.toUpperCase()}...`) : 'Descargas')
+                      }
+                    </p>
+                    <p className="text-xs text-text-secondary mt-0.5">
+                      {downloadHistory.filter(d => d.status === 'downloading').length} en progreso
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => {
+                      setIsUnifiedReportOpen(true);
+                      setIsReportMinimized(false);
+                    }}
+                    className="p-1 hover:bg-muted/5 rounded-lg transition-all"
+                    title="Abrir modal"
+                  >
+                    <ArrowUpRight className="h-4 w-4 text-text-secondary/40" />
+                  </button>
+                  <button
+                    onClick={() => setIsDownloadWidgetCollapsed(true)}
+                    className="p-1 hover:bg-muted/5 rounded-lg transition-all"
+                    title="Contraer"
+                  >
+                    <ChevronUp className="h-4 w-4 text-text-secondary/40" />
+                  </button>
+                  <button
+                    onClick={() => setIsReportMinimized(false)}
+                    className="p-1 hover:bg-muted/5 rounded-lg transition-all"
+                    title="Cerrar"
+                  >
+                    <X className="h-4 w-4 text-text-secondary/40" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+
+            {/* Expanded Info (shows when minimized and hovering or focused) */}
+            {downloadHistory.length > 0 && !isDownloadWidgetCollapsed && (
+              <div className="mt-4 pt-4 border-t border-border/10">
+                <p className="text-[10px] font-bold text-text-primary/40 uppercase tracking-wider mb-2">
+                  {downloadHistory.some(d => d.status === 'downloading') ? 'Descargas activas' : 'Descargas completadas'}
+                </p>
+                <div className="space-y-4 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                  {downloadHistory.map(download => (
+                    <div key={download.id} className="space-y-2 pb-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[12px] font-bold text-text-primary truncate" title={download.fileName}>
+                            {download.fileName}
+                          </p>
+                          <p className="text-[10px] text-text-secondary font-medium">
+                            {download.status === 'downloading' 
+                              ? `Reporte en progreso • ${download.progress}%` 
+                              : `Número de encuestas comparadas: ${download.surveys.length}`}
+                          </p>
+                        </div>
+                        <div className="shrink-0 flex items-center">
+                          {download.status === 'downloading' ? (
+                            <span className="text-brand font-bold text-[11px]">{download.progress}%</span>
+                          ) : download.status === 'completed' ? (
+                            <button
+                              onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = '#';
+                                link.download = download.fileName;
+                                link.click();
+                              }}
+                              className="text-brand hover:text-brand/80 text-[11px] font-bold transition-all"
+                            >
+                              Descargar
+                            </button>
+                          ) : (
+                            <span className="text-status-negative text-[11px] font-bold">Error</span>
+                          )}
+                        </div>
+                      </div>
+                      {download.status === 'downloading' && (
+                        <div className="h-1.5 w-full bg-brand/10 rounded-full overflow-hidden">
+                          <div className="h-full bg-brand transition-all duration-300" style={{ width: `${download.progress}%` }} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      )}
+
     </div>
   );
 };

@@ -393,7 +393,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
   const columns = React.useMemo(() => {
     if (!baseSurvey) return [];
-    const allSelected = [baseSurvey, ...comparisonSurveys];
+    
+    // Combine and sort chronologically (descending: newest first)
+    const allSelected = [baseSurvey, ...comparisonSurveys].sort((a, b) => getSurveyScore(b) - getSurveyScore(a));
 
     const suffixCounts: Record<string, number> = {};
     allSelected.forEach(s => {
@@ -410,35 +412,30 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       return suffix;
     };
 
-    const cols = [];
-    cols.push({
-      id: baseSurvey.id,
-      label: baseSurvey.name,
-      shortLabel: getShortLabel(baseSurvey),
-      isBase: true,
-      dataKey: 'currentScore',
-      dimKey: 'currentScore',
-      quesKey: 'currentScore',
-      sentKey: 'currentScore',
-      responses: parseInt(baseSurvey.participants || "450")
-    });
-
-    comparisonSurveys.forEach((survey, index) => {
-      const key = `p${index + 1}`;
-      cols.push({
+    return allSelected.map((survey) => {
+      const isBase = survey.id === baseSurvey.id;
+      
+      // Map to correct data keys based on base status
+      // Base always uses 'currentScore', others use p1, p2, etc.
+      let key = 'currentScore';
+      if (!isBase) {
+        const compIndex = comparisonSurveys.findIndex(s => s.id === survey.id);
+        key = `p${compIndex + 1}`;
+      }
+      
+      return {
         id: survey.id,
         label: survey.name,
         shortLabel: getShortLabel(survey),
-        isBase: false,
+        isBase,
         dataKey: key,
         dimKey: key,
         quesKey: key,
         sentKey: key,
-        responses: parseInt(survey.participants || "400")
-      });
+        responses: parseInt(survey.participants || (isBase ? "450" : "400"))
+      };
     });
-    return cols;
-  }, [baseSurvey, comparisonSurveys]);
+  }, [baseSurvey, comparisonSurveys, getSurveyScore]);
 
   const baseColumn = React.useMemo(() => columns.find(c => c.isBase), [columns]);
 

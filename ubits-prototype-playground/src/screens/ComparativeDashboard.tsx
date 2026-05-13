@@ -2124,21 +2124,17 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
           <div className="w-full bg-surface border-b border-border shadow-sm sticky top-0 z-40">
             <div className="flex items-center h-auto min-h-[5rem] px-4">
 
-              {/* Item 1: Categoría (Step 1) */}
-              <button
-                onClick={() => onEditSelection?.(1)}
-                className="flex items-center gap-4 px-8 h-full border-r border-border/30 hover:bg-muted/5 transition-all group shrink-0"
-              >
+              {/* Item 1: Categoría (Step 1) - Non-actionable as requested */}
+              <div className="flex items-center gap-4 px-8 h-full border-r border-border/30 shrink-0">
                 <div className="flex items-center gap-3">
-                  <Layers className="h-4 w-4 text-text-secondary group-hover:text-brand transition-colors" />
+                  <Layers className="h-4 w-4 text-text-secondary/40" />
                   <div className="flex flex-col items-start">
                     <span className="text-[11px] font-bold tracking-tight text-text-secondary/50 mb-0.5 flex items-center gap-1.5">
                       Categoría
-                      <PencilLine className="h-2 w-2 opacity-0 group-hover:opacity-100 transition-all text-brand" />
                     </span>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="text-sm font-bold text-text-primary tracking-tight group-hover:text-brand transition-colors max-w-[120px] truncate cursor-default">
+                        <span className="text-sm font-bold text-text-primary tracking-tight max-w-[120px] truncate cursor-default">
                           {type || 'Clima'}
                         </span>
                       </TooltipTrigger>
@@ -2151,8 +2147,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                     </Tooltip>
                   </div>
                 </div>
-                <ChevronRight className="h-3 w-3 text-text-secondary/20 group-hover:text-brand group-hover:translate-x-0.5 transition-all" />
-              </button>
+              </div>
 
               {/* Item 2: Referencia Base (Step 3) */}
               <button

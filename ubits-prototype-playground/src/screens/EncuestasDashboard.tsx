@@ -111,12 +111,15 @@ const TypeCard: React.FC<{
  </p>
  </div>
 
- <div className={cn(
- "h-4 w-4 rounded-full border-2 flex items-center justify-center transition-all duration-500 shrink-0 relative z-10",
- selected ? "bg-primary border-primary shadow-sm shadow-primary/10" : "border-border-strong/40 bg-surface-muted"
- )}>
- <Check className={cn("h-2.5 w-2.5 text-text-inverse transition-opacity", selected ? "opacity-100" : "opacity-0")} strokeWidth={4} />
- </div>
+  <div className={cn(
+    "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-500 shrink-0 relative z-10",
+    selected ? "border-primary shadow-sm shadow-primary/10" : "border-border-strong/40 bg-surface-muted"
+  )}>
+    <div className={cn(
+      "h-2.5 w-2.5 rounded-full bg-primary transition-all duration-500 transform",
+      selected ? "scale-100 opacity-100" : "scale-0 opacity-0"
+    )} />
+  </div>
  </div>
 );
 
@@ -301,7 +304,7 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
     setSelectedBaseId(latest?.id || null);
     setSelectedComparativeIds([]);
     setSearchQuery("");
-    setActiveStep(2);
+    // Automatic transition removed to allow manual "Next" button usage
   };
 
  const toggleComparative = (id: string) => {
@@ -566,6 +569,18 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
                 ))}
               </div>
             </ScrollArea>
+
+            {/* Footer for Step 1 */}
+            <div className="px-5 py-4 bg-surface border-t border-border/40 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] shrink-0 z-20">
+              <Button 
+                onClick={() => setActiveStep(2)}
+                disabled={!selectedType}
+                className="w-full gap-3 transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-30 disabled:grayscale group/btn h-11 text-xs font-bold tracking-tight shadow-lg shadow-primary/20 rounded-xl"
+              >
+                <span>Siguiente</span>
+                <ChevronRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
+              </Button>
+            </div>
           </div>
         )}
 
@@ -586,7 +601,7 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
                   <ChevronLeft className="h-4 w-4" />
                   <span>Volver</span>
                 </Button>
-                <Badge className="bg-primary text-text-inverse border-none text-[10px] font-bold px-3 py-1 rounded-full pointer-events-none">
+                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] font-bold px-3 py-1 rounded-full pointer-events-none transition-all duration-300">
                   {selectedComparativeIds.length} Seleccionadas
                 </Badge>
               </div>
@@ -598,38 +613,7 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
                 </p>
               </div>
 
-              {/* Selected Surveys Preview - Wrapped Layout with Tooltips */}
-              {selectedComparativeIds.length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-1">
-                    {surveys
-                      .filter(s => selectedComparativeIds.includes(s.id))
-                      .map((s) => (
-                        <Tooltip key={s.id}>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 border border-primary/20 rounded-full transition-all animate-in zoom-in-95 duration-300 max-w-[160px] cursor-default">
-                              <span className="text-[9px] font-bold text-primary truncate tracking-tight flex-1">{s.name}</span>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleComparative(s.id);
-                                }}
-                                className="text-primary/40 hover:text-primary transition-colors h-3 w-3 flex items-center justify-center rounded-full hover:bg-primary/10 shrink-0"
-                              >
-                                <X className="h-2.5 w-2.5" />
-                              </button>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" sideOffset={10} className="tooltip-premium">
-                            <div className="flex flex-col">
-                              <span className="tooltip-label">Encuesta seleccionada</span>
-                              <span className="tooltip-value">{s.name}</span>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      ))
-                    }
-                  </div>
-              )}
+
               
               <div className="flex gap-2">
                 <div className="relative group flex-1">
@@ -756,9 +740,7 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
                   <ChevronLeft className="h-4 w-4" />
                   <span>Volver</span>
                 </Button>
-                <Badge className="bg-info text-text-inverse border-none text-[10px] font-bold px-3 py-1 rounded-full pointer-events-none">
-                  Paso Final
-                </Badge>
+
               </div>
 
               <div className="text-center space-y-1">

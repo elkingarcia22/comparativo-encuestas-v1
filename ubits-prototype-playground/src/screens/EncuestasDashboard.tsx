@@ -464,7 +464,7 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
     title="Comparativo de encuestas"
     size="full"
     side="right"
-    className="flex flex-col !w-[40vw] !max-w-[40vw] border-l shadow-drawer transition-all duration-500"
+    className="flex flex-col !w-[30vw] !max-w-[30vw] border-l shadow-drawer transition-all duration-500"
     disablePadding
   >
     <div className="flex flex-col h-full overflow-hidden bg-surface-subtle">

@@ -323,6 +323,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [generationProgress, setGenerationProgress] = React.useState(0);
   const [shareLink, setShareLink] = React.useState('');
+  const [showShareSuccess, setShowShareSuccess] = React.useState(false);
 
   // Download History State
   interface DownloadItem {
@@ -1789,7 +1790,8 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
               const link = generateShareLink();
               setShareLink(link);
               navigator.clipboard.writeText(link).then(() => {
-                toast.success("¡Enlace generado y copiado al portapapeles!");
+                setShowShareSuccess(true);
+                setTimeout(() => setShowShareSuccess(false), 4000);
               });
             } else if (reportConfig.format === 'pdf') {
               exportToPDF();
@@ -4646,6 +4648,25 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
               </div>
             </div>
 
+            {/* Inline Notification */}
+            {showShareSuccess && (
+              <div className="mx-8 mt-6 p-4 bg-status-positive/5 border border-status-positive/20 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="h-10 w-10 rounded-full bg-status-positive/10 flex items-center justify-center shrink-0">
+                  <Check className="h-5 w-5 text-status-positive" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-status-positive">¡Enlace generado!</p>
+                  <p className="text-xs text-status-positive/70 font-medium">Copiado al portapapeles correctamente.</p>
+                </div>
+                <button 
+                  onClick={() => setShowShareSuccess(false)}
+                  className="h-8 w-8 rounded-full hover:bg-status-positive/10 flex items-center justify-center text-status-positive/40 hover:text-status-positive transition-all"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
             {/* Content Area */}
             <ScrollArea className="flex-1 w-full">
               <div className="pl-8 pr-10 py-6 space-y-6 w-full max-w-full overflow-x-hidden box-border">
@@ -4827,7 +4848,8 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                             onClick={() => {
                                               const link = generateShareLink();
                                               navigator.clipboard.writeText(link).then(() => {
-                                                toast.success("¡Enlace generado y copiado al portapapeles!");
+                                                setShowShareSuccess(true);
+                                                setTimeout(() => setShowShareSuccess(false), 4000);
                                               });
                                             }}
                                             className="text-[11px] font-bold text-text-secondary/60 hover:text-brand transition-all active:scale-95 flex items-center gap-1.5"

@@ -1599,14 +1599,13 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
       const isNoResponses = globalNoResponses || data.total === 0;
 
-      // Calculate delta vs previous survey
+      // Calculate delta vs BASE survey
       let delta = 0;
-      if (index > 0 && !isNoResponses) {
-        const prevCol = columns[index - 1];
-        const prevData = (sentimentData as any)[prevCol.sentKey];
-        if (prevData && prevData.total > 0) {
-          delta = data.positive - prevData.positive;
-        }
+      const baseCol = columns.find(c => c.isBase);
+      const baseData = baseCol ? (sentimentData as any)[baseCol.sentKey] : null;
+
+      if (!col.isBase && !isNoResponses && baseData && baseData.total > 0) {
+        delta = data.positive - baseData.positive;
       }
 
       const item = {
@@ -1619,7 +1618,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
           { id: `neg-${col.id}`, label: 'Negativo', value: formatPercentage(data.negative), percentage: formatPercentage(data.negative), tone: 'negative' as const },
         ],
         total: isNoResponses ? 0 : data.total,
-        delta: index > 0 && !isNoResponses ? delta : undefined,
+        delta: !col.isBase && !isNoResponses ? delta : undefined,
         deltaTone: delta >= 0 ? 'positive' as const : 'negative' as const,
         emptyMessage: isNoResponses ? "Muestra insuficiente con filtros actuales" : undefined
       };

@@ -81,9 +81,13 @@ La implementación en `/src/` es el referente técnico:
   - **Neutro**: *"Comentarios informativos o sin una carga emocional clara."*
   - **Negativo**: *"Comentarios que expresan descontento o áreas de mejora."*
 
-### RUTA 3: Acciones de Header
-- **Compartir (🔗)**: Tooltip: *"Copiar enlace del comparativo con filtros actuales."* -> Toast: *"Enlace copiado al portapapeles."*
-- **Descargar (📥)**: Tooltip: *"Exportar resultados a Excel o PDF."* -> Toast: *"La descarga del reporte ha iniciado."*
+### RUTA 3: Acciones de Header y Reportes
+- **Compartir (🔗)**: 
+  - **Clima/NPS**: Abre drawer en modo `share`. Al copiar el enlace, muestra Toast: *"Enlace copiado correctamente"* y cierra el drawer automáticamente.
+  - **Cultura**: Bloqueo preventivo con Toast de error: *"¡Vaya! Hubo un problema al generar tu enlace de comparativo... intenta compartirlo más tarde."*
+- **Descargar (📥)**: 
+  - **Clima/NPS**: Abre drawer unificado (40vw) en pestaña "Generar". El éxito en la descarga se registra en la pestaña "Descargas".
+  - **Cultura**: El botón abre el drawer, pero al intentar generar el PDF/CSV, el sistema redirige automáticamente a la pestaña de **"Descargas"** mostrando un fallo visual con mensaje humano.
 - **Información (💡)**: Tooltip: *"Guía rápida sobre cómo interpretar los deltas y colores del comparativo."*
 
 ## 9. Criterios de Aceptación
@@ -95,6 +99,7 @@ La implementación en `/src/` es el referente técnico:
 - **Iconografía**: 🌱 (Clima), ❤️ (Cultura), ⏱️ (NPS).
 - **Manejo de Errores**:
   - Toast Error: *"Ocurrió un error al procesar la solicitud. Por favor, intenta de nuevo."*
+  - Error Humano (Cultura/Fallas): *"¡Vaya! Hubo un problema al procesar la solicitud. Por favor intenta más tarde."*
   - Error Carga: *"Error de conexión. No pudimos recuperar la información del comparativo."*
 
 ## 11. Edge Cases
@@ -112,5 +117,15 @@ La implementación en `/src/` es el referente técnico:
 ## 14. Riesgos y Decisiones
 - **Decisión**: Se priorizó la encuesta Base como ancla fija para evitar confusión en el cálculo de deltas transversales.
 
-## 15. Aprobaciones
+## 16. Unified Report Drawer (Especificaciones Técnicas)
+- **Dimensionamiento**: Layout endurecido a **40vw** fijo en desktop para garantizar legibilidad de URLs y tablas de filtros. `overflow-x-hidden` obligatorio.
+- **Estructura de Pestañas**:
+  - **Modo Compartir**: Pestaña única. El bloque de "Personalización" se ubica debajo del input de enlace.
+  - **Modo Exportar**: Dual (Generar / Descargas).
+- **Estados de Interacción**:
+  - **Normal**: Drawer abierto ocupando el lateral derecho.
+  - **Minimizado (Floating Widget)**: Widget compacto lateral para seguimiento de descargas asíncronas.
+  - **Inline Error**: Mensaje rojo (`status-negative`) con icono `AlertCircle` dentro de la lista de historial para descargas fallidas.
+
+## 17. Aprobaciones
 - [ ] Product Manager | [ ] Tech Lead | [ ] QA Lead

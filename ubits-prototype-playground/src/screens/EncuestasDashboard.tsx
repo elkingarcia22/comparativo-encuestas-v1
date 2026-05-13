@@ -321,7 +321,7 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
  };
 
  return (
- <div className="flex flex-col h-full bg-surface-subtle rounded-xl border border-border/60 overflow-hidden shadow-sm">
+ <div className="flex flex-col h-full bg-surface rounded-xl border border-border/60 overflow-hidden shadow-sm">
  {/* Dashboard Header */}
  <div className="flex items-center justify-between px-8 py-6 border-b border-border/40 bg-surface">
  <div className="flex flex-col">
@@ -381,59 +381,57 @@ export const EncuestasDashboard: React.FC<EncuestasDashboardProps> = ({
     </DropdownMenuContent>
   </DropdownMenu>
  </div>
- </div>
+  </div>
 
- {/* Table Content */}
- <div className="flex-1 overflow-auto px-4 py-4">
- <div className="bg-surface rounded-xl border border-border/40 shadow-sm overflow-hidden">
- <Table>
- <TableHeader>
- <TableRow className="hover:bg-transparent border-b border-border/40 bg-muted/20">
- <TableHead className="w-[40px] px-6"><Checkbox className="border-border/60" /></TableHead>
- <TableHead className="w-[30px] p-0"></TableHead>
- <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4">Nombre</TableHead>
- <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4">Tipo</TableHead>
- <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4">Estado</TableHead>
- <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4">Inicio</TableHead>
- <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4">Cierre</TableHead>
- <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4 text-center">Part.</TableHead>
- <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4">Avance</TableHead>
- <TableHead className="w-[40px]"></TableHead>
- </TableRow>
- </TableHeader>
- <TableBody>
- {surveys.map((survey) => (
- <TableRow key={survey.id} className="border-b border-border/40 transition-all group">
- <TableCell className="px-6 py-4"><Checkbox className="border-border/60" /></TableCell>
- <TableCell className="p-0"><GripVertical className="h-4 w-4 text-text-secondary opacity-20 group-hover:opacity-50 transition-opacity cursor-grab" /></TableCell>
- <TableCell className="py-4 text-[12px] font-bold text-text-primary">{survey.name}</TableCell>
- <TableCell className="text-[11px] font-bold text-text-secondary/70">{survey.type}</TableCell>
- <TableCell>
- <Badge variant="outline" className={cn(
- "text-[10px] font-bold border-none px-2 py-0.5 rounded-full pointer-events-none",
- survey.statusVariant === "info" && "bg-info/10 text-info",
- survey.statusVariant === "positive" && "bg-status-positive-bg text-status-positive",
- survey.statusVariant === "warning" && "bg-status-warning-light/20 text-status-warning"
- )}>
- {survey.status}
- </Badge>
- </TableCell>
- <TableCell className="text-[11px] font-bold text-text-secondary/60">{survey.startDate}</TableCell>
- <TableCell className="text-[11px] font-bold text-text-secondary/60">{survey.endDate}</TableCell>
- <TableCell className="text-[11px] font-extrabold text-text-primary text-center">{survey.participants}</TableCell>
- <TableCell className="min-w-[140px]">
- <div className="flex items-center gap-3">
- <Progress value={survey.progress} className="h-1.5 flex-1 bg-muted" />
- <span className="text-[11px] font-bold text-text-primary min-w-[30px]">{survey.progress}%</span>
- </div>
- </TableCell>
- <TableCell><Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-muted"><MoreVertical className="h-4 w-4 text-text-secondary" /></Button></TableCell>
- </TableRow>
- ))}
- </TableBody>
- </Table>
- </div>
- </div>
+  {/* Table Content */}
+  <div className="flex-1 overflow-auto">
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent border-b border-border/40 bg-muted/20">
+          <TableHead className="w-[40px] px-8"><Checkbox className="border-border/60" /></TableHead>
+          <TableHead className="w-[30px] p-0"></TableHead>
+          <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4">Nombre</TableHead>
+          <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4">Tipo</TableHead>
+          <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4">Estado</TableHead>
+          <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4">Inicio</TableHead>
+          <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4">Cierre</TableHead>
+          <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4 text-center">Part.</TableHead>
+          <TableHead className="text-[11px] font-bold text-text-secondary tracking-tight py-4">Avance</TableHead>
+          <TableHead className="w-[40px]"></TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {surveys.map((survey) => (
+          <TableRow key={survey.id} className="border-b border-border/40 transition-all group">
+            <TableCell className="px-8 py-4"><Checkbox className="border-border/60" /></TableCell>
+            <TableCell className="p-0"><GripVertical className="h-4 w-4 text-text-secondary opacity-20 group-hover:opacity-50 transition-opacity cursor-grab" /></TableCell>
+            <TableCell className="py-4 text-[12px] font-bold text-text-primary">{survey.name}</TableCell>
+            <TableCell className="text-[11px] font-bold text-text-secondary/70">{survey.type}</TableCell>
+            <TableCell>
+              <Badge variant="outline" className={cn(
+                "text-[10px] font-bold border-none px-2 py-0.5 rounded-full pointer-events-none",
+                survey.statusVariant === "info" && "bg-info/10 text-info",
+                survey.statusVariant === "positive" && "bg-status-positive-bg text-status-positive",
+                survey.statusVariant === "warning" && "bg-status-warning-light/20 text-status-warning"
+              )}>
+                {survey.status}
+              </Badge>
+            </TableCell>
+            <TableCell className="text-[11px] font-bold text-text-secondary/60">{survey.startDate}</TableCell>
+            <TableCell className="text-[11px] font-bold text-text-secondary/60">{survey.endDate}</TableCell>
+            <TableCell className="text-[11px] font-extrabold text-text-primary text-center">{survey.participants}</TableCell>
+            <TableCell className="min-w-[140px]">
+              <div className="flex items-center gap-3">
+                <Progress value={survey.progress} className="h-1.5 flex-1 bg-muted" />
+                <span className="text-[11px] font-bold text-text-primary min-w-[30px]">{survey.progress}%</span>
+              </div>
+            </TableCell>
+            <TableCell><Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-muted"><MoreVertical className="h-4 w-4 text-text-secondary" /></Button></TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </div>
 
  {/* Pagination Footer */}
  <div className="px-8 py-4 flex items-center justify-between border-t border-border/60 bg-surface">

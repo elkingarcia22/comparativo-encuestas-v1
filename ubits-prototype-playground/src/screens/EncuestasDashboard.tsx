@@ -197,7 +197,7 @@ const SurveySelectionItem: React.FC<{
  selected ? "bg-primary border-primary shadow-sm shadow-primary/10" : "border-border-strong/40 bg-surface-muted"
  )}>
  {selected && (
- <Check className="h-2.5 w-2.5 text-text-inverse" strokeWidth={4} />
+ <div className="h-1.5 w-1.5 rounded-full bg-white shadow-sm" />
  )}
  </div>
  )}

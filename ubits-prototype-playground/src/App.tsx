@@ -4,14 +4,28 @@ import { UbitsToaster } from "@/components/feedback";
 import { EncuestasDashboard } from "@/screens/EncuestasDashboard";
 import { ComparativeDashboard } from "@/screens/ComparativeDashboard";
 import { PlaygroundShellDemo } from "@/screens/PlaygroundShellDemo";
+import { PDFPreview } from "@/screens/PDFPreview";
 
 function App() {
-  const [view, setView] = React.useState<'list' | 'comparative'>('list');
+  const [view, setView] = React.useState<'list' | 'comparative' | 'pdf-preview'>('list');
   const [comparisonContext, setComparisonContext] = React.useState<{
     baseId: string;
     comparativeIds: string[];
     type: string;
   } | null>(null);
+
+  // Detect PDF preview from URL
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'pdf-preview') {
+      const baseId = params.get('base') || '';
+      const comparativeIds = params.get('compare')?.split(',') || [];
+      const type = params.get('type') || 'Clima';
+      
+      setComparisonContext({ baseId, comparativeIds, type });
+      setView('pdf-preview');
+    }
+  }, []);
 
   const [activeStep, setActiveStep] = React.useState<number | undefined>(undefined);
   
@@ -35,7 +49,13 @@ function App() {
   return (
     <TooltipProvider>
       <UbitsToaster />
-      {view === 'list' ? (
+      {view === 'pdf-preview' ? (
+        <PDFPreview 
+          baseId={comparisonContext?.baseId}
+          comparativeIds={comparisonContext?.comparativeIds}
+          type={comparisonContext?.type}
+        />
+      ) : view === 'list' ? (
         <PlaygroundShellDemo>
           <EncuestasDashboard 
             key={activeStep !== undefined ? `step-${activeStep}` : 'default'}

@@ -13,16 +13,17 @@ export function ResponseStackedBarGroup({
   description,
   showLegend = true,
   showPercentages = true,
+  showIndividualLegends = false,
   size = "md",
   className,
   standalone = false,
   hideHeader = false,
   compact = false,
-}: ResponseStackedBarGroupProps) {
+}: ResponseStackedBarGroupProps & { showIndividualLegends?: boolean }) {
   
   // Extract shared legend if requested
   const sharedLegendItems: LegendItem[] = []
-  if (showLegend && items.length > 0) {
+  if (showLegend && items.length > 0 && !showIndividualLegends) {
     // Collect all unique tones/labels from segments (assuming they follow a consistent scale)
     const uniqueSegments = new Map<string, { label: string, tone?: LegendTone }>()
     items.forEach(item => {
@@ -48,8 +49,8 @@ export function ResponseStackedBarGroup({
         </div>
       )}
 
-      {/* Shared Legend (Top) */}
-      {showLegend && sharedLegendItems.length > 0 && (
+      {/* Shared Legend (Top) - Only if not showing individual ones */}
+      {showLegend && sharedLegendItems.length > 0 && !showIndividualLegends && (
         <div className="pb-2 border-b border-border/40">
           <InlineLegend items={sharedLegendItems} size="sm" />
         </div>
@@ -73,7 +74,7 @@ export function ResponseStackedBarGroup({
               size={compact ? "sm" : size}
               isBase={item.isBase}
               emptyMessage={item.emptyMessage}
-              showLegend={false} // Legend is shared at the group level
+              showLegend={showIndividualLegends} // Enabled per bar if requested
             />
           ))
         ) : (

@@ -316,9 +316,8 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   const [isReportMinimized, setIsReportMinimized] = React.useState(false);
   const [isDownloadWidgetCollapsed, setIsDownloadWidgetCollapsed] = React.useState(false);
   const [reportTab, setReportTab] = React.useState<'generate' | 'downloads'>('generate');
-  const [reportMode, setReportMode] = React.useState<'export' | 'share'>('export');
   const [reportConfig, setReportConfig] = React.useState({
-    format: 'pdf' as 'pdf' | 'csv' | 'link',
+    format: 'pdf' as 'pdf' | 'csv',
     includeFilters: true
   });
   const [isGenerating, setIsGenerating] = React.useState(false);
@@ -1806,65 +1805,14 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   }, [reportConfig, type, generateShareLink, baseSurvey, comparisonSurveys]);
 
   const exportToPDF = () => {
-    // Create CSV content for PDF (simplified - in production, use a PDF library like jsPDF)
-    const fileName = `dashboard-comparativo-${new Date().toISOString().split('T')[0]}.pdf`;
-
-    // For now, we'll create a text-based summary that can be printed to PDF
-    const surveyLabels = [baseSurvey, ...comparisonSurveys].map(s => getDisplayLabel(s)).join(', ');
-
-    let content = 'DASHBOARD COMPARATIVO\n';
-    content += `Encuestas: ${surveyLabels}\n`;
-    content += `Fecha de exportación: ${new Date().toLocaleDateString('es-ES')}\n\n`;
-
-    // Add dimensions data
-    if (dimensionsView === 'table' && filteredAndSortedDimensions.length > 0) {
-      content += 'DIMENSIONES\n';
-      content += '─'.repeat(80) + '\n';
-      filteredAndSortedDimensions.forEach(dim => {
-        const values = columns.map(col => `${(dim as any)[col.dimKey] || 0}%`).join(' → ');
-        content += `${dim.name}: ${values}\n`;
-      });
-    }
-
-    // Add NPS data
-    if (npsDistributionItems.length > 0) {
-      content += '\n\nNPS (NET PROMOTER SCORE)\n';
-      content += '─'.repeat(80) + '\n';
-      npsDistributionItems.forEach(item => {
-        content += `${item.label}: ${item.value}${item.delta ? ` (${item.delta > 0 ? '+' : ''}${item.delta})` : ''}\n`;
-      });
-    }
-
-    // Add filters if applicable
-    if (reportConfig.includeFilters) {
-      const dimTabId = dimensionsView === 'heatmap' ? 'dimensionesHeatmap' : 'dimensionesTable';
-      const tabIdMap: Record<string, string> = {
-        'resumen': 'resumen',
-        'dimensiones': dimTabId,
-        'preguntas': 'preguntas',
-        'sentimiento': 'participacion',
-        'comentarios': 'comentarios'
-      };
-      const currentTabId = tabIdMap[activeTab] || 'resumen';
-      const sectionFilters = getSectionFilters(currentTabId);
-
-      content += '\n\nFILTROS APLICADOS\n';
-      content += '─'.repeat(80) + '\n';
-      Object.entries(sectionFilters).forEach(([category, values]: any) => {
-        content += `${category}: ${Array.isArray(values) ? values.join(', ') : values}\n`;
-      });
-    }
-
-    // Create blob and download
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const params = new URLSearchParams();
+    params.set('base', baseSurvey?.id || '');
+    params.set('compare', (comparisonSurveys || []).map(s => s.id).join(','));
+    params.set('type', type || '');
+    params.set('view', 'pdf-preview');
+    
+    // Open in new tab
+    window.open(`${window.location.origin}${window.location.pathname}?${params.toString()}`, '_blank');
   };
 
   const exportToCSV = () => {
@@ -2010,25 +1958,6 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         <div className="flex items-center gap-3">
           <Button
             onClick={() => {
-              if (type === 'Cultura') {
-                toast.error("¡Vaya! Hubo un problema al generar tu enlace de comparativo. Estamos trabajando para solucionarlo, por favor intenta compartirlo más tarde.");
-                return;
-              }
-              setReportMode('share');
-              setReportConfig(prev => ({ ...prev, format: 'link' }));
-              setIsUnifiedReportOpen(true);
-              setReportTab('generate');
-            }}
-            variant="ghost"
-            size="sm"
-            className="h-11 px-6 gap-2.5 text-xs font-bold tracking-tight text-text-secondary hover:bg-muted/5 rounded-xl transition-all"
-          >
-            <Share2 className="h-4 w-4" />
-            <span>Compartir</span>
-          </Button>
-          <Button
-            onClick={() => {
-              setReportMode('export');
               setReportTab('generate');
               setReportConfig(prev => ({ ...prev, format: 'pdf' }));
               setIsUnifiedReportOpen(true);
@@ -4667,17 +4596,15 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       <Sheet open={isUnifiedReportOpen} onOpenChange={setIsUnifiedReportOpen}>
         <SheetContent aria-describedby={undefined} showCloseButton={false} side="right" className="!w-full sm:!w-[40vw] !max-w-full min-w-[320px] h-full p-0 border-l border-border/10 bg-background overflow-hidden flex flex-col shadow-2xl">
           <div className="flex flex-col h-full w-full max-w-full min-w-0 overflow-hidden box-border">
-            {/* Header - No tabs for share mode */}
+            {/* Header */}
             <div className="px-8 py-6 bg-background border-b border-border/10 shrink-0">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col gap-0.5 flex-1">
                   <SheetTitle className="text-lg font-bold tracking-tight text-text-primary">
-                    {reportMode === 'share' ? 'Compartir comparativo' : 'Comparativo de encuestas'}
+                    Comparativo de encuestas
                   </SheetTitle>
                   <SheetDescription className="text-sm font-medium text-text-secondary-foreground">
-                    {reportMode === 'share' 
-                      ? 'Obtén un enlace para que otros vean este análisis' 
-                      : 'Configura y descarga tu reporte del comparativo'}
+                    Configura y descarga tu reporte del comparativo
                   </SheetDescription>
                 </div>
                 <Button
@@ -4690,35 +4617,33 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                 </Button>
               </div>
 
-              {/* Tabs Experience - Only for export mode */}
-              {reportMode !== 'share' && (
-                <div className="flex gap-8 relative mt-6">
-                  <button
-                    onClick={() => setReportTab('generate')}
-                    className={cn(
-                      "pb-2.5 text-sm font-bold transition-all relative",
-                      reportTab === 'generate' ? "text-brand" : "text-text-secondary hover:text-text-primary"
-                    )}
-                  >
-                    Generar reporte
-                    {reportTab === 'generate' && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setReportTab('downloads')}
-                    className={cn(
-                      "pb-2.5 text-sm font-bold transition-all relative",
-                      reportTab === 'downloads' ? "text-brand" : "text-text-secondary hover:text-text-primary"
-                    )}
-                  >
-                    Descargas
-                    {reportTab === 'downloads' && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
-                    )}
-                  </button>
-                </div>
-              )}
+              {/* Tabs Experience */}
+              <div className="flex gap-8 relative mt-6">
+                <button
+                  onClick={() => setReportTab('generate')}
+                  className={cn(
+                    "pb-2.5 text-sm font-bold transition-all relative",
+                    reportTab === 'generate' ? "text-brand" : "text-text-secondary hover:text-text-primary"
+                  )}
+                >
+                  Configuración
+                  {reportTab === 'generate' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
+                  )}
+                </button>
+                <button
+                  onClick={() => setReportTab('downloads')}
+                  className={cn(
+                    "pb-2.5 text-sm font-bold transition-all relative",
+                    reportTab === 'downloads' ? "text-brand" : "text-text-secondary hover:text-text-primary"
+                  )}
+                >
+                  Descargas
+                  {reportTab === 'downloads' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-full" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Content Area */}
@@ -4726,89 +4651,49 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
               <div className="pl-8 pr-10 py-6 space-y-6 w-full max-w-full overflow-x-hidden box-border">
                 {reportTab === 'generate' ? (
                   <div className="space-y-5">
-                    {/* Format Selection (Only for export mode) */}
-                    {reportMode !== 'share' && (
-                      <div className="space-y-3">
-                        <p className="text-sm font-bold text-text-primary">Tipo de formato</p>
-                        <div className="space-y-2">
-                          {[
-                            { id: 'pdf', label: 'Documento PDF', desc: 'Análisis visual completo con gráficos', icon: FileText, mode: 'export' },
-                            { id: 'csv', label: 'Datos CSV (Excel)', desc: 'Base de datos para análisis externo', icon: FileCode, mode: 'export' }
-                          ].map((format) => (
-                            <label 
-                              key={format.id}
-                              className={cn(
-                                "flex items-center justify-between gap-4 p-4 border rounded-2xl cursor-pointer transition-all",
-                                reportConfig.format === format.id 
-                                  ? "border-brand bg-brand/5 shadow-md shadow-brand/5" 
-                                  : "border-border/10 hover:bg-muted/5"
-                              )} 
-                              htmlFor={`format-${format.id}`}
-                            >
-                              <div className="flex items-center gap-4 flex-1">
-                                <div className={cn(
-                                  "h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 transition-all",
-                                  reportConfig.format === format.id ? "bg-brand/10" : "bg-muted/5"
-                                )}>
-                                  <format.icon className={cn("h-6 w-6", reportConfig.format === format.id ? "text-brand" : "text-text-secondary/40")} />
-                                </div>
-                                <div className="flex flex-col gap-0.5">
-                                  <p className="text-sm font-bold text-text-primary">{format.label}</p>
-                                  <p className="text-xs text-text-secondary/60 leading-relaxed">{format.desc}</p>
-                                </div>
-                              </div>
-                              <input
-                                type="radio"
-                                id={`format-${format.id}`}
-                                name="reportFormat"
-                                value={format.id}
-                                checked={reportConfig.format === format.id}
-                                onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value as any }))}
-                                className="h-5 w-5 accent-brand shrink-0 cursor-pointer"
-                              />
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-
-
-                    {/* Share Link Section (Share Mode Only) */}
-                    {reportMode === 'share' && (
-                      <div className="p-5 bg-surface-subtle border border-border/10 rounded-2xl space-y-5">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-2xl bg-brand/10 flex items-center justify-center shrink-0">
-                            <Link className="h-5 w-5 text-brand" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-text-primary">Enlace de acceso</p>
-                            <p className="text-[11px] text-text-secondary/60">Cualquier persona con este enlace podrá ver el análisis</p>
-                          </div>
-                        </div>
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full min-w-0">
-                          <div className="flex-1 min-w-0 h-12 bg-background border border-border/20 rounded-2xl px-4 flex items-center overflow-hidden shadow-inner shadow-black/5">
-                            <p className="text-xs text-text-secondary truncate font-medium break-all">https://ubits.com/analytics/compare/share/7k2j-9p1m-x3v5</p>
-                          </div>
-                          <Button 
-                            onClick={() => {
-                              if (type === 'Cultura') {
-                                toast.error("¡Vaya! Hubo un problema al generar tu enlace de comparativo. Estamos trabajando para solucionarlo, por favor intenta compartirlo más tarde.");
-                                setIsUnifiedReportOpen(false);
-                                return;
-                              }
-                              navigator.clipboard.writeText("https://ubits.com/analytics/compare/share/7k2j-9p1m-x3v5");
-                              toast.success("Enlace copiado al portapapeles");
-                              setIsUnifiedReportOpen(false);
-                            }}
-                            className="h-12 px-6 bg-brand hover:bg-brand/90 text-text-inverse rounded-2xl font-bold text-sm gap-2 shrink-0 shadow-lg shadow-brand/20 transition-all active:scale-95"
+                    {/* Format Selection */}
+                    <div className="space-y-3">
+                      <p className="text-sm font-bold text-text-primary">Tipo de formato</p>
+                      <div className="space-y-2">
+                        {[
+                          { id: 'pdf', label: 'Documento PDF', desc: 'Análisis visual completo con gráficos', icon: FileText, mode: 'export' },
+                          { id: 'csv', label: 'Datos CSV (Excel)', desc: 'Base de datos para análisis externo', icon: FileCode, mode: 'export' }
+                        ].map((format) => (
+                          <label 
+                            key={format.id}
+                            className={cn(
+                              "flex items-center justify-between gap-4 p-4 border rounded-2xl cursor-pointer transition-all",
+                              reportConfig.format === format.id 
+                                ? "border-brand bg-brand/5 shadow-md shadow-brand/5" 
+                                : "border-border/10 hover:bg-muted/5"
+                            )} 
+                            htmlFor={`format-${format.id}`}
                           >
-                            <Copy className="h-4 w-4" />
-                            Copiar
-                          </Button>
-                        </div>
+                            <div className="flex items-center gap-4 flex-1">
+                              <div className={cn(
+                                "h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 transition-all",
+                                reportConfig.format === format.id ? "bg-brand/10" : "bg-muted/5"
+                              )}>
+                                <format.icon className={cn("h-6 w-6", reportConfig.format === format.id ? "text-brand" : "text-text-secondary/40")} />
+                              </div>
+                              <div className="flex flex-col gap-0.5">
+                                <p className="text-sm font-bold text-text-primary">{format.label}</p>
+                                <p className="text-xs text-text-secondary/60 leading-relaxed">{format.desc}</p>
+                              </div>
+                            </div>
+                            <input
+                              type="radio"
+                              id={`format-${format.id}`}
+                              name="reportFormat"
+                              value={format.id}
+                              checked={reportConfig.format === format.id}
+                              onChange={(e) => setReportConfig(prev => ({ ...prev, format: e.target.value as any }))}
+                              className="h-5 w-5 accent-brand shrink-0 cursor-pointer"
+                            />
+                          </label>
+                        ))}
                       </div>
-                    )}
+                    </div>
 
                     {/* Options / Personalization (Always present) */}
                     <div className="space-y-4">
@@ -4937,12 +4822,33 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                                       <span className="text-sm font-bold text-brand">{download.progress}%</span>
                                     ) : download.status === 'completed' ? (
                                       <div className="flex flex-col items-end gap-1">
-                                        <button 
-                                          onClick={() => setFailingDownloadId(download.id)}
-                                          className="text-sm font-bold text-brand hover:underline transition-all active:scale-95"
-                                        >
-                                          Descargar
-                                        </button>
+                                        <div className="flex items-center gap-3">
+                                          <button 
+                                            onClick={() => {
+                                              const link = generateShareLink();
+                                              navigator.clipboard.writeText(link).then(() => {
+                                                toast.success("¡Enlace generado y copiado al portapapeles!");
+                                              });
+                                            }}
+                                            className="text-[11px] font-bold text-text-secondary/60 hover:text-brand transition-all active:scale-95 flex items-center gap-1.5"
+                                          >
+                                            <Share2 className="h-3 w-3" />
+                                            Compartir
+                                          </button>
+                                          <div className="h-3 w-[1px] bg-border/10" />
+                                          <button 
+                                            onClick={() => {
+                                              if (download.format === 'pdf') {
+                                                exportToPDF();
+                                              } else {
+                                                setFailingDownloadId(download.id);
+                                              }
+                                            }}
+                                            className="text-[11px] font-bold text-brand hover:underline transition-all active:scale-95"
+                                          >
+                                            Descargar
+                                          </button>
+                                        </div>
                                         {failingDownloadId === download.id && (
                                           <div className="flex items-center gap-1 text-status-negative animate-in fade-in slide-in-from-top-1 duration-200">
                                             <AlertCircle className="h-2.5 w-2.5" />
@@ -4987,44 +4893,42 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
             </ScrollArea>
 
             {/* Footer with Generation Button */}
-            {reportMode !== 'share' && (
-              <div className="px-8 py-6 bg-background border-t border-border/10 shrink-0 shadow-[0_-8px_32px_rgba(0,0,0,0.05)] space-y-4 w-full box-border max-w-full">
-                <div className="flex flex-col gap-3 w-full">
-                    {(isGenerating || reportTab === 'downloads') && (
-                      <Button
-                        onClick={() => {
-                          setIsReportMinimized(true);
-                          setIsUnifiedReportOpen(false);
-                        }}
-                        variant="outline"
-                        className="w-full h-12 border-border/20 hover:bg-muted/5 text-text-primary font-bold tracking-tight rounded-2xl transition-all active:scale-[0.98]"
-                      >
-                        Minimizar y continuar
-                      </Button>
-                    )}
-                    
-                    {reportTab === 'generate' && (
-                      <Button
-                        disabled={isGenerating}
-                        onClick={() => handleGenerateReport()}
-                        className="w-full h-12 bg-brand hover:bg-brand/90 text-text-inverse font-bold tracking-tight rounded-2xl shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
-                      >
-                        {isGenerating ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Generando...
-                          </>
-                        ) : (
-                          <>
-                            <Download className="h-4 w-4" />
-                            {`Descargar ${reportConfig.format.toUpperCase()}`}
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </div>
+            <div className="px-8 py-6 bg-background border-t border-border/10 shrink-0 shadow-[0_-8px_32px_rgba(0,0,0,0.05)] space-y-4 w-full box-border max-w-full">
+              <div className="flex flex-col gap-3 w-full">
+                  {(isGenerating || reportTab === 'downloads') && (
+                    <Button
+                      onClick={() => {
+                        setIsReportMinimized(true);
+                        setIsUnifiedReportOpen(false);
+                      }}
+                      variant="outline"
+                      className="w-full h-12 border-border/20 hover:bg-muted/5 text-text-primary font-bold tracking-tight rounded-2xl transition-all active:scale-[0.98]"
+                    >
+                      Minimizar y continuar
+                    </Button>
+                  )}
+                  
+                  {reportTab === 'generate' && (
+                    <Button
+                      disabled={isGenerating}
+                      onClick={() => handleGenerateReport()}
+                      className="w-full h-12 bg-brand hover:bg-brand/90 text-text-inverse font-bold tracking-tight rounded-2xl shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generando...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4" />
+                          {`Descargar ${reportConfig.format.toUpperCase()}`}
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
-              )}
+              </div>
           </div>
         </SheetContent>
       </Sheet>
@@ -5075,7 +4979,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                     <p className="text-sm font-bold text-text-primary truncate">
                       {downloadHistory.every(d => d.status === 'completed')
                         ? 'Descarga completada'
-                        : (isGenerating ? (reportConfig.format === 'link' ? 'Generando enlace...' : `Preparando ${reportConfig.format.toUpperCase()}...`) : 'Descargas')
+                        : (isGenerating ? `Preparando ${reportConfig.format.toUpperCase()}...` : 'Descargas')
                       }
                     </p>
                     <p className="text-xs text-text-secondary mt-0.5">

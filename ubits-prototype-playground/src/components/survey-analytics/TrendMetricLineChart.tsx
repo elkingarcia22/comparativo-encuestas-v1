@@ -28,7 +28,9 @@ export function TrendMetricLineChart({
   variant,
   className,
   standalone = false,
-}: TrendMetricLineChartProps) {
+  showLabels = false,
+  disableHover = false,
+}: TrendMetricLineChartProps & { showLabels?: boolean, disableHover?: boolean }) {
 
   // Build ECharts option
   const option: EChartsOption = React.useMemo(() => {
@@ -46,11 +48,12 @@ export function TrendMetricLineChart({
     interface EChartsSeriesOption {
       name: string
       type: "line"
-      data: (number | null)[]
+      data: (number | null | any)[]
       smooth: boolean
       symbol: string
       symbolSize: number
       showSymbol?: boolean
+      label?: any
       lineStyle?: {
         width: number
         type?: "solid" | "dashed" | "dotted"
@@ -87,8 +90,19 @@ export function TrendMetricLineChart({
         data: dataValues as any,
         smooth: true,
         symbol: "circle",
-        symbolSize: isSparkline ? 0 : 6, // Hide symbols in sparkline
-        showSymbol: !isSparkline && s.data.length === 1,
+        symbolSize: isSparkline ? 0 : 8, // Slightly larger for PDF visibility
+        showSymbol: true, // Always show symbols if not sparkline
+        label: showLabels ? {
+          show: true,
+          position: 'top',
+          formatter: (params: any) => {
+            const val = params.data.value;
+            return s.label.toLowerCase().includes('nps') ? val : `${val}%`;
+          },
+          fontSize: 10,
+          fontWeight: 'bold',
+          color: '#1e293b'
+        } : undefined,
         lineStyle: {
           width: isSparkline ? 2 : 3,
         },
@@ -147,17 +161,17 @@ export function TrendMetricLineChart({
         icon: "circle",
       },
       grid: {
-        top: isSparkline ? 5 : (standalone ? 5 : (title ? 60 : 15)),
+        top: isSparkline ? 5 : (showLabels ? 30 : (standalone ? 5 : (title ? 60 : 15))),
         bottom: isSparkline ? 5 : (showLegend ? 40 : (standalone ? 25 : 25)),
         left: isSparkline ? 0 : (standalone ? 15 : 40),
-        right: isSparkline ? 0 : (standalone ? 5 : 10),
+        right: isSparkline ? 0 : (standalone ? 5 : 20), // More space for labels
         containLabel: !isSparkline,
       },
       xAxis: {
         show: !isSparkline,
         type: "category",
         data: labels,
-        boundaryGap: false,
+        boundaryGap: true, // Better for point labels
       },
       yAxis: {
         show: !isSparkline,
@@ -171,7 +185,7 @@ export function TrendMetricLineChart({
       },
       series: echartsSeries,
       tooltip: {
-        show: !isSparkline,
+        show: !isSparkline && !disableHover,
         trigger: "axis",
         backgroundColor: 'rgba(255, 255, 255, 0.98)',
         borderColor: 'rgba(0, 0, 0, 0.05)',
@@ -225,7 +239,7 @@ export function TrendMetricLineChart({
         }
       }
     }
-  }, [series, showLegend, showComparison, title, variant, standalone]);
+  }, [series, showLegend, showComparison, title, variant, standalone, showLabels, disableHover]);
 
 
   if (standalone) {

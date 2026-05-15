@@ -1717,6 +1717,39 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
 
 
+  
+  React.useEffect(() => {
+    console.log('📋 DRAWER DEBUG:', {
+      reportTab,
+      isUnifiedReportOpen,
+      scrollAreaHeight: document.querySelector('[data-test="scroll-area"]')?.clientHeight,
+      contentHeight: document.querySelector('[data-test="drawer-content"]')?.clientHeight,
+      footerVisible: reportTab === 'generate',
+      contentOverflow: document.querySelector('[data-test="drawer-content"]')?.scrollHeight
+    });
+  }, [reportTab, isUnifiedReportOpen]);
+
+  
+  React.useEffect(() => {
+    setTimeout(() => {
+      // Buscar el ScrollArea viewport
+      const viewport = document.querySelector('[data-radix-scroll-area-viewport]');
+      const content = viewport?.querySelector('div');
+      const sheetContent = document.querySelector('[role="dialog"]');
+      
+      console.log('📋 DRAWER TAB DEBUG - Configuración:', {
+        activeTab: reportTab,
+        drawerOpen: isUnifiedReportOpen,
+        viewportHeight: viewport?.clientHeight,
+        contentHeight: content?.clientHeight,
+        contentScrollHeight: content?.scrollHeight,
+        viewportScrollHeight: viewport?.scrollHeight,
+        sheetContentHeight: sheetContent?.clientHeight,
+        overflowing: viewport && content && content.scrollHeight > viewport.clientHeight
+      });
+    }, 150);
+  }, [reportTab, isUnifiedReportOpen]);
+
   // Unified Report Handler
   const handleGenerateReport = React.useCallback(() => {
     // Immediate validation for Cultura
@@ -4593,7 +4626,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       <Sheet open={isUnifiedReportOpen} onOpenChange={setIsUnifiedReportOpen}>
         <SheetContent aria-describedby={undefined} showCloseButton={false} side="right" className="!w-full sm:!w-[40vw] !max-w-full min-w-[320px] h-full p-0 border-l border-border/10 bg-background overflow-hidden flex flex-col shadow-2xl">
           <div className="flex flex-col h-full w-full max-w-full min-w-0 overflow-hidden box-border">
-            {/* Header */}
+            {/* Header - Fixed */}
             <div className="px-8 py-6 bg-background border-b border-border/10 shrink-0">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col gap-0.5 flex-1">
@@ -4645,7 +4678,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
             {/* Inline Notification */}
             {showShareSuccess && (
-              <div className="mx-8 mt-6 p-4 bg-status-positive/5 border border-status-positive/20 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="mx-8 mt-6 p-4 bg-status-positive/5 border border-status-positive/20 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-300 shrink-0">
                 <div className="h-10 w-10 rounded-full bg-status-positive/10 flex items-center justify-center shrink-0">
                   <Check className="h-5 w-5 text-status-positive" />
                 </div>
@@ -4653,7 +4686,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                   <p className="text-sm font-bold text-status-positive">¡Enlace generado!</p>
                   <p className="text-xs text-status-positive/70 font-medium">Copiado al portapapeles correctamente.</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowShareSuccess(false)}
                   className="h-8 w-8 rounded-full hover:bg-status-positive/10 flex items-center justify-center text-status-positive/40 hover:text-status-positive transition-all"
                 >
@@ -4662,9 +4695,9 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
               </div>
             )}
 
-            {/* Content Area */}
-            <ScrollArea className="flex-1 w-full">
-              <div className="pl-8 pr-10 py-6 space-y-6 w-full max-w-full overflow-x-hidden box-border">
+            {/* Content Area - Scrollable */}
+            <ScrollArea className="flex-1 w-full min-h-0" data-test="scroll-area">
+              <div className="pl-8 pr-10 py-6 pb-6 space-y-6 w-full max-w-full overflow-x-hidden box-border" data-test="drawer-content">
                 {reportTab === 'generate' ? (
                   <div className="space-y-5">
                     {/* Format Selection */}
@@ -4745,7 +4778,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                           <p className="text-[10px] font-bold text-text-primary/40 uppercase tracking-wider">Filtros que se aplicarán</p>
                           <div className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
                         </div>
-                        <div className="space-y-3 max-h-[40vh] min-h-[120px] overflow-y-auto pr-2 custom-scrollbar">
+                        <div className="space-y-3 pr-2">
                           {['resumen', 'dimensionesTable', 'dimensionesHeatmap', 'preguntas', 'comentarios'].map(id => {
                             const sectionLabel = {
                               resumen: 'Resumen Ejecutivo',
@@ -4909,53 +4942,39 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
               </div>
             </ScrollArea>
 
-            {/* Footer with Generation Button */}
-            <div className="px-8 py-6 bg-background border-t border-border/10 shrink-0 shadow-[0_-8px_32px_rgba(0,0,0,0.05)] space-y-4 w-full box-border max-w-full">
-              <div className="flex flex-col gap-3 w-full">
-                  {(isGenerating || reportTab === 'downloads') && (
-                    <Button
-                      onClick={() => {
-                        setIsReportMinimized(true);
-                        setIsUnifiedReportOpen(false);
-                      }}
-                      variant="outline"
-                      className="w-full h-12 border-border/20 hover:bg-muted/5 text-text-primary font-bold tracking-tight rounded-2xl transition-all active:scale-[0.98]"
-                    >
-                      Minimizar y continuar
-                    </Button>
-                  )}
-                  
-                  {reportTab === 'generate' && (
-                    <Button
-                      disabled={isGenerating}
-                      onClick={() => handleGenerateReport()}
-                      className="w-full h-12 bg-brand hover:bg-brand/90 text-text-inverse font-bold tracking-tight rounded-2xl shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Generando...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="h-4 w-4" />
-                          {`Descargar ${reportConfig.format.toUpperCase()}`}
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </div>
+            {/* Footer with Generation Button - Fixed at bottom */}
+            <div className="px-8 py-6 bg-background border-t border-border/10 shrink-0 shadow-[0_-8px_32px_rgba(0,0,0,0.05)] space-y-3 w-full box-border max-w-full z-10">
+              {reportTab === 'generate' ? (
+                <Button
+                  onClick={() => handleGenerateReport()}
+                  className="w-full h-12 bg-brand hover:bg-brand/90 text-text-inverse font-bold tracking-tight rounded-2xl shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  <Download className="h-4 w-4" />
+                  {`Descargar ${reportConfig.format.toUpperCase()}`}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    setIsReportMinimized(true);
+                    setIsUnifiedReportOpen(false);
+                  }}
+                  variant="outline"
+                  className="w-full h-12 border-border/20 hover:bg-muted/5 text-text-primary font-bold tracking-tight rounded-2xl transition-all active:scale-[0.98]"
+                >
+                  Minimizar y continuar
+                </Button>
+              )}
+            </div>
           </div>
         </SheetContent>
       </Sheet>
 
       {/* Immediate Progress Modal (Small Experience) - Expandable */}
       {isReportMinimized && downloadHistory.length > 0 && (
-        <div className="fixed bottom-8 right-8 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed bottom-4 right-4 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300 max-h-[calc(100vh-2rem)] flex flex-col">
           <div
             className={cn(
-              "bg-white border border-border/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] w-[320px] overflow-hidden transition-all duration-300",
+              "bg-white border border-border/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] w-[320px] overflow-hidden transition-all duration-300 flex flex-col max-h-[calc(100vh-2rem)]",
               isDownloadWidgetCollapsed ? "p-5" : "p-5"
             )}
           >
@@ -5112,7 +5131,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                 <p className="text-[10px] font-bold text-text-primary/40 uppercase tracking-wider mb-2">
                   {downloadHistory.some(d => d.status === 'downloading') ? 'Descargas activas' : 'Descargas completadas'}
                 </p>
-                <div className="space-y-4 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                <div className="space-y-4 max-h-[calc(100vh-15rem)] overflow-y-auto pr-1 custom-scrollbar">
                   {downloadHistory.map(download => (
                     <div key={download.id} className="space-y-2 pb-1">
                       <div className="flex items-start justify-between gap-3">
